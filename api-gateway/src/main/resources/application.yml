@@ -1,0 +1,25 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+
+  cloud:
+    compatibility-verifier:
+      enabled: false
+    gateway:
+      routes:
+        - id: login-service
+          uri: http://login-service:8081
+          predicates:
+            - Path=/login/**
+          filters:
+            - RemoveRequestHeader=Cookie
+            - AddResponseHeader=X-Gateway, Komfort
+      default-filters:
+        - AddResponseHeader=X-Powered-By, KomfortChain
+
+logging:
+  level:
+    org.springframework.cloud.gateway: INFO
