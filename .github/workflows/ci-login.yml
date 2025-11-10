@@ -54,7 +54,14 @@ jobs:
             --format "HTML" \
             --out ./dependency-check-report \
             --enableExperimental \
-            --noupdate
+            --updateonly \
+            || true
+          ./dc/dependency-check/bin/dependency-check.sh \
+            --project "modulo2-login" \
+            --scan ./login-service \
+            --format "HTML" \
+            --out ./dependency-check-report \
+            --enableExperimental
         shell: bash
 
       # Upload do relatório de vulnerabilidades
