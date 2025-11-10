@@ -42,26 +42,25 @@ jobs:
           name: surefire-test-report
           path: login-service/target/site/
 
-      # Scanner de dependências (OWASP Dependency Check via Java local)
+      # Scanner de dependências (OWASP Dependency Check)
       - name: Run OWASP Dependency Check
         run: |
           mkdir dependency-check-report
-          curl -L https://github.com/jeremylong/DependencyCheck/releases/download/v10.0.3/dependency-check-10.0.3-release.zip -o dc.zip
+          echo "Baixando OWASP Dependency Check (versão 10.0.4-SNAPSHOT com fix CVSSv4 SAFETY)..."
+          curl -L https://nightly.link/jeremylong/DependencyCheck/workflows/build/master/dependency-check-10.0.4-SNAPSHOT-release.zip -o dc.zip
           unzip -q dc.zip -d dc
+          
+          echo "Iniciando análise de dependências..."
           ./dc/dependency-check/bin/dependency-check.sh \
             --project "modulo2-login" \
             --scan ./login-service \
             --format "HTML" \
             --out ./dependency-check-report \
             --enableExperimental \
-            --updateonly \
-            || true
-          ./dc/dependency-check/bin/dependency-check.sh \
-            --project "modulo2-login" \
-            --scan ./login-service \
-            --format "HTML" \
-            --out ./dependency-check-report \
-            --enableExperimental
+            --failOnCVSS 7 \
+            $(if [ -n "${{ secrets.NVD_API_KEY }}" ]; then echo "--nvdApiKey ${{ secrets.NVD_API_KEY }}"; fi)
+          
+          echo "Análise concluída. Relatório disponível em dependency-check-report/"
         shell: bash
 
       # Upload do relatório de vulnerabilidades
