@@ -59,13 +59,6 @@ Icon?
 *.secret
 
 # ===========================
-# Docker
-# ===========================
-# Ignorar Dockerfiles individuais (mas manter docker-compose)
-**/Dockerfile
-!docker-compose.yml
-
-# ===========================
 # Java e JVM
 # ===========================
 *.class

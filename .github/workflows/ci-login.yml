@@ -1,0 +1,25 @@
+name: Login API - CI Security
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  security-pipeline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Build Login Service
+        run: ./login-service/mvnw clean package -DskipTests
+      - name: JWT Unit Tests
+        run: ./login-service/mvnw test -Dtest=JwtUtilTest
+      - name: Dependency Scan (OWASP)
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: 'modulo2-login'
+          path: './login-service'
+          format: 'HTML'
+          outdir: './dependency-check-report'
