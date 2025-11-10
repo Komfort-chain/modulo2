@@ -42,16 +42,27 @@ jobs:
           name: surefire-test-report
           path: login-service/target/site/
 
-      # Scanner de dependências (OWASP Dependency Check - modo estável e offline)
+      # Scanner de dependências (OWASP Dependency Check com update inicial)
       - name: Run OWASP Dependency Check
         run: |
           mkdir -p dependency-check-report
-          echo "Executando OWASP Dependency Check (modo estável e offline)..."
+          echo "Baixando e atualizando base do OWASP Dependency Check..."
 
+          # 1️⃣ Atualiza o banco de dados (só uma vez)
+          docker run --rm \
+            -e NVD_API_KEY="${{ secrets.NVD_API_KEY }}" \
+            -v "$(pwd)/dependency-check-data":/usr/share/dependency-check/data \
+            owasp/dependency-check:10.0.3 \
+            --updateonly || echo "Falha na atualização, seguirá offline."
+
+          echo "Executando OWASP Dependency Check (modo estável)..."
+
+          # 2️⃣ Executa a análise com o banco persistido
           docker run --rm \
             -e NVD_API_KEY="${{ secrets.NVD_API_KEY }}" \
             -v "$(pwd)/login-service":/src \
             -v "$(pwd)/dependency-check-report":/report \
+            -v "$(pwd)/dependency-check-data":/usr/share/dependency-check/data \
             owasp/dependency-check:10.0.3 \
             --project "modulo2-login" \
             --scan /src \
