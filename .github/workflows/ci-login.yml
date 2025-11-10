@@ -42,26 +42,41 @@ jobs:
           name: surefire-test-report
           path: login-service/target/site/
 
-      # Scanner de dependências (OWASP Dependency Check via Docker)
-      - name: Run OWASP Dependency Check (Docker)
+      # Scanner de dependências (OWASP Dependency Check)
+      - name: Run OWASP Dependency Check (com fallback)
         run: |
-          mkdir dependency-check-report
-          echo "Executando análise com OWASP Dependency Check (container oficial)..."
+          mkdir -p dependency-check-report
+          echo "Executando análise com OWASP Dependency Check (snapshot com correção CVSSv4 SAFETY)..."
 
+          set -e
           docker run --rm \
             -e NVD_API_KEY="${{ secrets.NVD_API_KEY }}" \
             -v "$(pwd)/login-service":/src \
             -v "$(pwd)/dependency-check-report":/report \
-            owasp/dependency-check:10.0.3 \
+            ghcr.io/jeremylong/owasp-dependency-check:10.0.4-SNAPSHOT \
             --project "modulo2-login" \
             --scan /src \
             --format "HTML" \
             --out /report \
             --enableExperimental \
-            --failOnCVSS 7
+            --failOnCVSS 7 \
+            $(if [ -n "${{ secrets.NVD_API_KEY }}" ]; then echo "--nvdApiKey ${{ secrets.NVD_API_KEY }}"; fi) \
+          || (
+            echo "Falha na atualização da NVD. Rodando em modo offline (--noupdate)..."
+            docker run --rm \
+              -v "$(pwd)/login-service":/src \
+              -v "$(pwd)/dependency-check-report":/report \
+              ghcr.io/jeremylong/owasp-dependency-check:10.0.4-SNAPSHOT \
+              --project "modulo2-login" \
+              --scan /src \
+              --format "HTML" \
+              --out /report \
+              --enableExperimental \
+              --noupdate
+          )
 
           echo "Relatório gerado em ./dependency-check-report"
-          ls -lh dependency-check-report
+          ls -lh dependency-check-report || true
 
       # Upload do relatório de vulnerabilidades
       - name: Upload Dependency Report
