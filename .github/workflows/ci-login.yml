@@ -42,39 +42,26 @@ jobs:
           name: surefire-test-report
           path: login-service/target/site/
 
-      # Scanner de dependências (OWASP Dependency Check SNAPSHOT - com fix CVSSv4)
-      - name: Run OWASP Dependency Check
+      # Scanner de dependências (OWASP Dependency Check via Docker)
+      - name: Run OWASP Dependency Check (Docker)
         run: |
           mkdir dependency-check-report
-          echo "Baixando OWASP Dependency Check 10.0.4-SNAPSHOT (com fix CVSSv4)..."
-          curl -L https://oss.sonatype.org/content/repositories/snapshots/org/owasp/dependency-check/cli/10.0.4-SNAPSHOT/cli-10.0.4-20241107.174523-3-release.zip -o dc.zip
-          unzip -q dc.zip -d dc
+          echo "Executando análise com OWASP Dependency Check (container oficial)..."
 
-          echo "Atualizando base NVD com chave de API..."
-          ./dc/dependency-check/bin/dependency-check.sh \
+          docker run --rm \
+            -e NVD_API_KEY="${{ secrets.NVD_API_KEY }}" \
+            -v "$(pwd)/login-service":/src \
+            -v "$(pwd)/dependency-check-report":/report \
+            owasp/dependency-check:10.0.3 \
             --project "modulo2-login" \
-            --scan ./login-service \
+            --scan /src \
             --format "HTML" \
-            --out ./dependency-check-report \
+            --out /report \
             --enableExperimental \
-            --failOnCVSS 7 \
-            --nvdApiKey "${{ secrets.NVD_API_KEY }}" \
-            --updateonly || true
+            --failOnCVSS 7
 
-          echo "Executando análise de dependências..."
-          ./dc/dependency-check/bin/dependency-check.sh \
-            --project "modulo2-login" \
-            --scan ./login-service \
-            --format "HTML" \
-            --out ./dependency-check-report \
-            --enableExperimental \
-            --failOnCVSS 7 \
-            --nvdApiKey "${{ secrets.NVD_API_KEY }}"
-
-          echo "Listando arquivos de relatório gerados:"
-          ls -lh ./dependency-check-report
-        shell: bash
-
+          echo "Relatório gerado em ./dependency-check-report"
+          ls -lh dependency-check-report
 
       # Upload do relatório de vulnerabilidades
       - name: Upload Dependency Report
