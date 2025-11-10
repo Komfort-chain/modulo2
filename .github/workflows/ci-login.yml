@@ -42,38 +42,23 @@ jobs:
           name: surefire-test-report
           path: login-service/target/site/
 
-      # Scanner de dependências (OWASP Dependency Check)
-      - name: Run OWASP Dependency Check (com fallback)
+      # Scanner de dependências (OWASP Dependency Check - modo estável e offline)
+      - name: Run OWASP Dependency Check
         run: |
           mkdir -p dependency-check-report
-          echo "Executando análise com OWASP Dependency Check (snapshot com correção CVSSv4 SAFETY)..."
+          echo "Executando OWASP Dependency Check (modo estável e offline)..."
 
-          set -e
           docker run --rm \
             -e NVD_API_KEY="${{ secrets.NVD_API_KEY }}" \
             -v "$(pwd)/login-service":/src \
             -v "$(pwd)/dependency-check-report":/report \
-            ghcr.io/jeremylong/owasp-dependency-check:10.0.4-SNAPSHOT \
+            owasp/dependency-check:10.0.3 \
             --project "modulo2-login" \
             --scan /src \
             --format "HTML" \
             --out /report \
             --enableExperimental \
-            --failOnCVSS 7 \
-            $(if [ -n "${{ secrets.NVD_API_KEY }}" ]; then echo "--nvdApiKey ${{ secrets.NVD_API_KEY }}"; fi) \
-          || (
-            echo "Falha na atualização da NVD. Rodando em modo offline (--noupdate)..."
-            docker run --rm \
-              -v "$(pwd)/login-service":/src \
-              -v "$(pwd)/dependency-check-report":/report \
-              ghcr.io/jeremylong/owasp-dependency-check:10.0.4-SNAPSHOT \
-              --project "modulo2-login" \
-              --scan /src \
-              --format "HTML" \
-              --out /report \
-              --enableExperimental \
-              --noupdate
-          )
+            --noupdate
 
           echo "Relatório gerado em ./dependency-check-report"
           ls -lh dependency-check-report || true
