@@ -9,25 +9,31 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Checkout do código
       - uses: actions/checkout@v4
 
+      # Configuração do JDK 21 (Temurin)
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 21
 
+      # Build do Login Service
       - name: Build Login Service
         run: mvn -f login-service/pom.xml clean package -DskipTests
 
+      # Execução de Testes Unitários
       - name: Run Unit Tests
         run: mvn -f login-service/pom.xml test -Dsurefire.reportFormat=plain
 
+      # Geração do relatório HTML do Surefire
       - name: Generate Surefire HTML Report
         if: success() || failure()
         run: |
           mvn -f login-service/pom.xml surefire-report:report-only
           mvn -f login-service/pom.xml site -DgenerateReports=false
 
+      # Upload do relatório de testes
       - name: Upload Surefire Report
         if: success() || failure()
         uses: actions/upload-artifact@v4
@@ -35,9 +41,20 @@ jobs:
           name: surefire-test-report
           path: login-service/target/site/
 
+      # Scanner de dependências (OWASP Dependency Check)
+      - name: Run OWASP Dependency Check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: "modulo2-login"
+          path: "./login-service"
+          format: "HTML"
+          out: "./dependency-check-report"
+          args: "--enableExperimental"
+
+      # Upload do relatório de vulnerabilidades
       - name: Upload Dependency Report
         if: success() || failure()
         uses: actions/upload-artifact@v4
         with:
           name: dependency-check-report
-          path: ./dependency-check-report
+          path: dependency-check-report/
