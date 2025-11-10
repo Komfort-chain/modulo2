@@ -32,12 +32,10 @@ jobs:
         with:
           languages: java
 
-      - name: Build both Java modules (using system Maven)
+      - name: Build both Java modules (system Maven + explicit pom)
         run: |
-          cd api-gateway
-          mvn clean package -DskipTests
-          cd ../login-service
-          mvn clean package -DskipTests
+          mvn -f api-gateway/pom.xml clean package -DskipTests
+          mvn -f login-service/pom.xml clean package -DskipTests
 
       - name: Run CodeQL Analysis
         uses: github/codeql-action/analyze@v3
