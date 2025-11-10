@@ -18,37 +18,26 @@ jobs:
       security-events: write
 
     steps:
-      # 1️⃣ Clona o repositório
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2️⃣ Instala JDK 21 (compatível com Spring Boot 3.5)
       - name: Setup JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 21
 
-      # 3️⃣ Inicializa CodeQL para Java
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
           languages: java
 
-      # 4️⃣ Dá permissão de execução aos wrappers Maven
-      - name: Ensure Maven Wrapper Executable
+      - name: Build both Java modules (using system Maven)
         run: |
-          chmod +x ./api-gateway/mvnw
-          chmod +x ./login-service/mvnw
+          cd api-gateway
+          mvn clean package -DskipTests
+          cd ../login-service
+          mvn clean package -DskipTests
 
-      # 5️⃣ Compila manualmente ambos os serviços com caminhos absolutos
-      - name: Build both Java modules
-        run: |
-          cd $GITHUB_WORKSPACE/api-gateway
-          ./mvnw clean package -DskipTests
-          cd $GITHUB_WORKSPACE/login-service
-          ./mvnw clean package -DskipTests
-
-      # 6️⃣ Executa a análise de segurança
       - name: Run CodeQL Analysis
         uses: github/codeql-action/analyze@v3
