@@ -4,9 +4,6 @@ import io.jsonwebtoken.ExpiredJwtException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.lang.reflect.Field;
-import java.util.Date;
-
 public class JwtUtilTest {
 
     private final JwtUtil jwtUtil = new JwtUtil();
@@ -24,20 +21,16 @@ public class JwtUtilTest {
     }
 
     @Test
-    void deveLancarExcecaoParaTokenExpirado() throws Exception {
-        // Acessa o campo privado 'expirationMs' e reduz o tempo para 1 ms
-        Field field = JwtUtil.class.getDeclaredField("expirationMs");
-        field.setAccessible(true);
-        field.set(jwtUtil, 1L);
+    void deveLancarExcecaoParaTokenExpirado() throws InterruptedException {
+        // Gera token já expirado (-1 segundo)
+        String tokenExpirado = jwtUtil.generateWithCustomExpiration("expiredUser", "ROLE_USER", -1000);
 
-        String token = jwtUtil.generate("expiredUser", "ROLE_USER");
-
-        // Aguarda o token expirar
-        Thread.sleep(10);
+        // Garante expiração efetiva
+        Thread.sleep(50);
 
         Assertions.assertThrows(
                 ExpiredJwtException.class,
-                () -> jwtUtil.validate(token),
+                () -> jwtUtil.validate(tokenExpirado),
                 "Deve lançar ExpiredJwtException para tokens expirados"
         );
     }

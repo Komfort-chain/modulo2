@@ -14,11 +14,15 @@ import java.util.Date;
 public class JwtUtil {
 
     private final Key secret = Keys.hmacShaKeyFor(
-    System.getenv().getOrDefault("JWT_SECRET", "default-school-secret-32-chars-min")
-        .getBytes(StandardCharsets.UTF_8)
-        );
+            System.getenv().getOrDefault("JWT_SECRET", "default-school-secret-32-chars-min")
+                    .getBytes(StandardCharsets.UTF_8)
+    );
+
     private final long expirationMs = 3600000; // 1 hora
 
+    /**
+     * Gera um token JWT com expiração padrão de 1 hora.
+     */
     public String generate(String username, String role) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + expirationMs);
@@ -32,12 +36,32 @@ public class JwtUtil {
                 .compact();
     }
 
+    /**
+     * Gera um token JWT com expiração customizada (para testes).
+     */
+    public String generateWithCustomExpiration(String username, String role, long expirationMillis) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + expirationMillis);
+
+        return Jwts.builder()
+                .setSubject(username)
+                .claim("role", role)
+                .setIssuedAt(now)
+                .setExpiration(expiryDate)
+                .signWith(secret, SignatureAlgorithm.HS256)
+                .compact();
+    }
+
+    /**
+     * Valida o token e retorna o usuário.
+     */
     public String validate(String token) {
         Claims claims = Jwts.parserBuilder()
                 .setSigningKey(secret)
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
+
         return claims.getSubject();
     }
 }
