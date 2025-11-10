@@ -1,7 +1,8 @@
 # ===========================
-# Build e dependências Maven
+# 🔹 Build e dependências Maven
 # ===========================
 target/
+!**/src/**/target/          # mantém targets de exemplo se existirem em src
 !.mvn/wrapper/maven-wrapper.jar
 **/mvnw
 **/mvnw.cmd
@@ -15,7 +16,7 @@ dependency-reduced-pom.xml
 buildNumber.properties
 
 # ===========================
-# IDEs e Ferramentas
+# 🔹 IDEs e Ferramentas
 # ===========================
 .idea/
 *.iml
@@ -32,18 +33,23 @@ buildNumber.properties
 .metadata/
 .recommenders/
 .checkstyle/
+.nb-gradle/
+build/
+out/
 
 # ===========================
-# Logs e Arquivos Temporários
+# 🔹 Logs e Arquivos Temporários
 # ===========================
 logs/
 *.log
 *.tmp
 *.bak
 *.swp
+*.orig
+*.rej
 
 # ===========================
-# Sistema Operacional
+# 🔹 Sistema Operacional
 # ===========================
 .DS_Store
 Thumbs.db
@@ -51,33 +57,50 @@ ehthumbs.db
 Icon?
 
 # ===========================
-# Ambientes e Credenciais
+# 🔹 Ambientes e Credenciais
 # ===========================
 .env
 *.env
 *.local
 *.secret
+*.key
+*.pem
+*.crt
 
 # ===========================
-# Java e JVM
+# 🔹 Java e JVM
 # ===========================
 *.class
-*.jar
 *.war
 *.ear
 hs_err_pid*
 replay_pid*
 
 # ===========================
-# SonarQube
+# 🔹 SonarQube
 # ===========================
 .sonar/
 .scannerwork/
 
 # ===========================
-# Arquivos temporários de sistema ou editor
+# 🔹 Arquivos Docker e Compose (não ignorar)
 # ===========================
-*.orig
-*.rej
-*.bak
-*.swp
+!Dockerfile
+!docker-compose.yml
+!**/Dockerfile
+!**/docker-compose.yml
+
+# ===========================
+# 🔹 Scripts e CI/CD (não ignorar)
+# ===========================
+!.github/
+!.github/workflows/
+!*.ps1
+!*.sh
+
+# ===========================
+# 🔹 Arquivos que devem ir para o versionamento
+# ===========================
+!README.md
+!LICENSE
+!.gitignore
