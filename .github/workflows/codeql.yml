@@ -32,7 +32,7 @@ jobs:
         with:
           languages: java
 
-      - name: Build both Java modules (system Maven + explicit pom)
+      - name: Build both Java modules
         run: |
           mvn -f api-gateway/pom.xml clean package -DskipTests
           mvn -f login-service/pom.xml clean package -DskipTests
