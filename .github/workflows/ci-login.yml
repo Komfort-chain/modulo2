@@ -16,56 +16,36 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      - name: Configurar Maven Mirror
-        run: |
-          mkdir -p ~/.m2
-          cat <<EOF > ~/.m2/settings.xml
-          <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
-                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-                    xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 https://maven.apache.org/xsd/settings-1.0.0.xsd">
-            <mirrors>
-              <mirror>
-                <id>aliyunmaven</id>
-                <mirrorOf>central</mirrorOf>
-                <name>Aliyun Maven Mirror</name>
-                <url>https://maven.aliyun.com/repository/central</url>
-              </mirror>
-              <mirror>
-                <id>spring-mirror</id>
-                <mirrorOf>central</mirrorOf>
-                <name>Spring Release Mirror</name>
-                <url>https://repo.spring.io/release/</url>
-              </mirror>
-            </mirrors>
-          </settings>
-          EOF
-
       - name: Build Login Service
-        run: mvn -s ~/.m2/settings.xml -f login-service/pom.xml clean package -DskipTests
+        run: mvn -f login-service/pom.xml clean package -DskipTests
 
       - name: Run Unit Tests
-        run: mvn -s ~/.m2/settings.xml -f login-service/pom.xml test -Dsurefire.reportFormat=plain
+        run: mvn -f login-service/pom.xml test -Dsurefire.reportFormat=plain
 
-      - name: Generate HTML Test Report
+      - name: Generate Surefire HTML Report
         if: success() || failure()
-        run: mvn -s ~/.m2/settings.xml -f login-service/pom.xml surefire-report:report
+        run: |
+          mvn -f login-service/pom.xml surefire-report:report-only
+          mvn -f login-service/pom.xml site -DgenerateReports=false
 
-      - name: Upload Test Report Artifact
+      - name: Upload Surefire Report
         if: success() || failure()
         uses: actions/upload-artifact@v4
         with:
-          name: login-service-test-report
-          path: login-service/target/site/surefire-report.html
+          name: surefire-test-report
+          path: login-service/target/site/
 
       - name: Dependency Scan (OWASP)
+        env:
+          JAVA_HOME: /usr/lib/jvm/temurin-21-jdk
         uses: dependency-check/Dependency-Check_Action@main
         with:
-          project: "modulo2-login"
-          path: "./login-service"
-          format: "HTML"
-          outdir: "./dependency-check-report"
+          project: 'modulo2-login'
+          path: './login-service'
+          format: 'HTML'
+          out: './dependency-check-report'
 
-      - name: Upload OWASP Dependency Report
+      - name: Upload Dependency Report
         if: success() || failure()
         uses: actions/upload-artifact@v4
         with:
