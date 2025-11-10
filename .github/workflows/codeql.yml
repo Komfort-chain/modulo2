@@ -1,4 +1,5 @@
 name: CodeQL Analysis
+
 on:
   push:
     branches: [main]
@@ -13,10 +14,20 @@ jobs:
       actions: read
       contents: read
       security-events: write
+
     steps:
       - uses: actions/checkout@v4
+
       - uses: github/codeql-action/init@v3
         with:
           languages: java
-      - uses: github/codeql-action/autobuild@v3
+
+      # Compila manualmente ambos os módulos Java
+      - name: Build manually both services
+        run: |
+          cd api-gateway
+          ./mvnw clean package -DskipTests
+          cd ../login-service
+          ./mvnw clean package -DskipTests
+
       - uses: github/codeql-action/analyze@v3
