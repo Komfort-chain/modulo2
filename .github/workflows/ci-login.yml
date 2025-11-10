@@ -13,7 +13,8 @@ jobs:
       - uses: actions/checkout@v4
 
       # Configuração do JDK 21 (Temurin)
-      - uses: actions/setup-java@v4
+      - name: Setup JDK 21
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 21
@@ -41,15 +42,20 @@ jobs:
           name: surefire-test-report
           path: login-service/target/site/
 
-      # Scanner de dependências (OWASP Dependency Check)
+      # Scanner de dependências (OWASP Dependency Check via Java local)
       - name: Run OWASP Dependency Check
-        uses: dependency-check/Dependency-Check_Action@main
-        with:
-          project: "modulo2-login"
-          path: "./login-service"
-          format: "HTML"
-          out: "./dependency-check-report"
-          args: "--enableExperimental"
+        run: |
+          mkdir dependency-check-report
+          curl -L https://github.com/jeremylong/DependencyCheck/releases/download/v10.0.3/dependency-check-10.0.3-release.zip -o dc.zip
+          unzip -q dc.zip -d dc
+          ./dc/dependency-check/bin/dependency-check.sh \
+            --project "modulo2-login" \
+            --scan ./login-service \
+            --format "HTML" \
+            --out ./dependency-check-report \
+            --enableExperimental \
+            --noupdate
+        shell: bash
 
       # Upload do relatório de vulnerabilidades
       - name: Upload Dependency Report
