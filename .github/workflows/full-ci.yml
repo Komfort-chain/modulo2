@@ -92,7 +92,7 @@ jobs:
             api-gateway/target/surefire-reports/
 
   # --------------------------------------------------------
-  # JOB 2 — OWASP Dependency-Check (corrigido v10.0.4 + purge + cache fix)
+  # JOB 2 — OWASP Dependency-Check (corrigido v10.0.4 + purge condicional)
   # --------------------------------------------------------
   security-scan:
     name: OWASP Dependency-Check (Vulnerability Audit)
@@ -134,38 +134,35 @@ jobs:
           curl -sL https://github.com/jeremylong/DependencyCheck/releases/download/v10.0.4/dependency-check-10.0.4-release.zip -o depcheck.zip
           unzip -q depcheck.zip -d $HOME/depcheck
 
-      - name: Verificar NVD_API_KEY
-        run: |
-          if [ -z "$NVD_API_KEY" ]; then
-            echo "NVD_API_KEY não encontrada. Verifique se o Secret foi criado em Settings > Secrets and variables > Actions > Secrets."
-            echo "Rodando em modo offline (--noupdate)."
-          else
-            echo "NVD_API_KEY detectada (tamanho: ${#NVD_API_KEY} caracteres)."
-          fi
-
       - name: Run OWASP Dependency-Check (Login Service)
         run: |
           mkdir -p reports/login-service
           echo "Verificando Login Service..."
+          purge_flag=""
+          if [ -f "$HOME/.dependency-check-data/odc.mv.db" ]; then
+            purge_flag="--purge"
+          fi
           $HOME/depcheck/dependency-check/bin/dependency-check.sh \
             --project "Login Service" \
             --data ~/.dependency-check-data \
             --scan login-service \
             --format "ALL" \
-            --out reports/login-service \
-            --purge
+            --out reports/login-service $purge_flag
 
       - name: Run OWASP Dependency-Check (API Gateway)
         run: |
           mkdir -p reports/api-gateway
           echo "Verificando API Gateway..."
+          purge_flag=""
+          if [ -f "$HOME/.dependency-check-data/odc.mv.db" ]; then
+            purge_flag="--purge"
+          fi
           $HOME/depcheck/dependency-check/bin/dependency-check.sh \
             --project "API Gateway" \
             --data ~/.dependency-check-data \
             --scan api-gateway \
             --format "ALL" \
-            --out reports/api-gateway \
-            --purge
+            --out reports/api-gateway $purge_flag
 
       - name: Upload Dependency-Check Reports
         uses: actions/upload-artifact@v4
