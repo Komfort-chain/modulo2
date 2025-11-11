@@ -54,7 +54,7 @@ jobs:
       - name: Update OWASP Dependency Check Database
         if: steps.cache-nvd.outputs.cache-hit != 'true'
         run: |
-          mkdir -p dependency-check-data dependency-check-report
+          mkdir -p dependency-check-data
           echo "Atualizando base da NVD (isso pode levar alguns minutos)..."
 
           docker run --rm \
@@ -66,40 +66,26 @@ jobs:
           echo "Banco NVD atualizado e armazenado em cache."
 
       # Scanner de dependências (usando banco local ou online se necessário)
-      - name: Run OWASP Dependency Check
+      - name: Run OWASP Dependency Check (NVD + Meta Mirror)
         run: |
           mkdir -p dependency-check-report
-          echo "Executando OWASP Dependency Check (modo estável)..."
+          echo "Executando OWASP Dependency Check (NVD + Meta Mirror)..."
 
-          if [ ! -d "dependency-check-data" ] || [ -z "$(ls -A dependency-check-data)" ]; then
-            echo "Banco da NVD não encontrado. Atualizando antes de executar..."
-            docker run --rm \
-              -e NVD_API_KEY="${{ secrets.NVD_API_KEY }}" \
-              -v "$(pwd)/dependency-check-data":/usr/share/dependency-check/data \
-              owasp/dependency-check:10.0.3 \
-              --updateonly
-          fi
-
-          # Remove locks antigos
-          rm -f dependency-check-data/*.lck || true
-          rm -f dependency-check-data/*.lock.db || true
-
-          # Executa o scanner
           docker run --rm \
             -e NVD_API_KEY="${{ secrets.NVD_API_KEY }}" \
+            -v "$(pwd)/dependency-check-data":/usr/share/dependency-check/data \
             -v "$(pwd)/login-service":/src \
             -v "$(pwd)/dependency-check-report":/report \
-            -v "$(pwd)/dependency-check-data":/usr/share/dependency-check/data \
             owasp/dependency-check:10.0.3 \
             --project "modulo2-login" \
             --scan /src \
             --format "HTML" \
             --out /report \
             --enableExperimental \
-            --noupdate || echo "Rodou em modo offline."
-
-          echo "Relatório gerado em ./dependency-check-report"
-          ls -lh dependency-check-report || true
+            --failOnCVSS 7 \
+            --mirror https://github.com/jeremylong/DependencyCheckMirror/raw/main/data \
+            --nvdApiKey ${{ secrets.NVD_API_KEY }} \
+            || echo "NVD indisponível, utilizando mirror local OWASP (modo offline)."
 
       # Upload do relatório de vulnerabilidades
       - name: Upload Dependency Report
