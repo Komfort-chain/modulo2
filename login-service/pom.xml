@@ -99,15 +99,19 @@
 
     <build>
         <plugins>
+            <!-- Compilador -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.11.0</version>
                 <configuration>
+                    <source>21</source>
+                    <target>21</target>
                     <release>21</release>
                 </configuration>
             </plugin>
 
+            <!-- Testes -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
@@ -117,22 +121,33 @@
                 </configuration>
             </plugin>
 
+            <!-- Cobertura -->
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>0.8.12</version>
                 <executions>
-                    <execution><goals><goal>prepare-agent</goal></goals></execution>
-                    <execution><id>report</id><phase>test</phase><goals><goal>report</goal></goals></execution>
+                    <execution>
+                        <goals><goal>prepare-agent</goal></goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <phase>test</phase>
+                        <goals><goal>report</goal></goals>
+                    </execution>
                 </executions>
             </plugin>
 
+            <!-- BOM CycloneDX -->
             <plugin>
                 <groupId>org.cyclonedx</groupId>
                 <artifactId>cyclonedx-maven-plugin</artifactId>
                 <version>2.9.0</version>
                 <executions>
-                    <execution><phase>package</phase><goals><goal>makeBom</goal></goals></execution>
+                    <execution>
+                        <phase>package</phase>
+                        <goals><goal>makeBom</goal></goals>
+                    </execution>
                 </executions>
             </plugin>
 
@@ -145,9 +160,11 @@
                     <failOnError>false</failOnError>
                     <nvdApiKey>${env.NVD_API_KEY}</nvdApiKey>
                     <noupdate>true</noupdate>
+                    <dataDirectory>${project.build.directory}/dependency-check-data</dataDirectory>
                 </configuration>
             </plugin>
 
+            <!-- Empacotamento -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
