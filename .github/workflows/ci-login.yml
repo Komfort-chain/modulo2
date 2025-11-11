@@ -14,39 +14,43 @@ jobs:
       security-events: write # necessário para subir SARIF
 
     steps:
-      # 1) Checkout do código
+      # 1) Checkout
       - uses: actions/checkout@v4
 
-      # 2) Configuração do JDK 21
+      # 2) JDK 21
       - name: Setup JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 21
 
-      # 3) Build + geração de SBOM (CycloneDX)
-      - name: Build modules (package + SBOM)
+      # 3) Build + SBOM
+      - name: Build modules and generate SBOMs
         run: |
           mvn -f login-service/pom.xml clean package -DskipTests
           mvn -f api-gateway/pom.xml clean package -DskipTests
 
-          echo "Copiando SBOMs para local padrão..."
-          find login-service/target/classes -name "application.cdx.json" -exec cp {} login-service/target/bom.json \; || echo "SBOM não encontrado no login-service"
-          find api-gateway/target/classes -name "application.cdx.json" -exec cp {} api-gateway/target/bom.json \; || echo "SBOM não encontrado no api-gateway"
+          mkdir -p sboms
+          find login-service/target/classes -name "application.cdx.json" -exec cp {} sboms/login-service.cdx.json \;
+          find api-gateway/target/classes -name "application.cdx.json" -exec cp {} sboms/api-gateway.cdx.json \;
 
-          echo "Adicionando campo 'bomFormat': 'CycloneDX' para compatibilidade com Trivy..."
-          sudo apt-get install -y jq
-          for file in login-service/target/bom.json api-gateway/target/bom.json; do
-            if [ -f "$file" ]; then
-              jq '. + {"bomFormat": "CycloneDX"}' "$file" > tmp.$$.json && mv tmp.$$.json "$file"
-            fi
-          done
+      # 4) Instala CycloneDX CLI e valida/converte SBOMs
+      - name: Normalize SBOMs (CycloneDX CLI)
+        run: |
+          echo "Instalando CycloneDX CLI..."
+          wget -q https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.27.1/cyclonedx-linux-x64 -O cyclonedx
+          chmod +x cyclonedx
 
-          echo "SBOMs prontos para o scan:"
-          ls -lh login-service/target/bom.json || true
-          ls -lh api-gateway/target/bom.json || true
+          echo "Normalizando SBOMs..."
+          ./cyclonedx validate --input-file sboms/login-service.cdx.json || true
+          ./cyclonedx convert --input-file sboms/login-service.cdx.json --output-file login-service/target/bom.json --output-format json
 
-      # 4) Upload dos SBOMs como artefatos
+          ./cyclonedx validate --input-file sboms/api-gateway.cdx.json || true
+          ./cyclonedx convert --input-file sboms/api-gateway.cdx.json --output-file api-gateway/target/bom.json --output-format json
+
+          ls -lh login-service/target/bom.json api-gateway/target/bom.json
+
+      # 5) Upload dos SBOMs
       - name: Upload SBOMs
         uses: actions/upload-artifact@v4
         with:
@@ -55,7 +59,7 @@ jobs:
             login-service/target/bom.json
             api-gateway/target/bom.json
 
-      # 5) Varredura de vulnerabilidades com Trivy (baseada no SBOM)
+      # 6) Scans Trivy (agora reconhece formato)
       - name: Trivy SBOM scan (login-service)
         uses: aquasecurity/trivy-action@0.28.0
         with:
@@ -64,7 +68,7 @@ jobs:
           format: sarif
           output: trivy-login.sarif
           severity: HIGH,CRITICAL
-          exit-code: "0" # apenas reporta
+          exit-code: "0"
 
       - name: Trivy SBOM scan (api-gateway)
         uses: aquasecurity/trivy-action@0.28.0
@@ -76,7 +80,7 @@ jobs:
           severity: HIGH,CRITICAL
           exit-code: "0"
 
-      # 6) Upload dos relatórios SARIF para o GitHub Code Scanning
+      # 7) Upload SARIFs
       - name: Upload SARIF (login-service)
         uses: github/codeql-action/upload-sarif@v3
         with:
@@ -87,7 +91,7 @@ jobs:
         with:
           sarif_file: trivy-gateway.sarif
 
-      # 7) Testes unitários e relatório Surefire
+      # 8) Testes unitários e relatório
       - name: Run Unit Tests
         run: mvn -f login-service/pom.xml test -Dsurefire.reportFormat=plain
 
