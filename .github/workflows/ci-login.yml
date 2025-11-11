@@ -24,8 +24,8 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      # 3) Build + SBOM
-      - name: Build modules and generate SBOMs
+      # 3) Build e geração dos SBOMs
+      - name: Build modules (package + SBOM)
         run: |
           mvn -f login-service/pom.xml clean package -DskipTests
           mvn -f api-gateway/pom.xml clean package -DskipTests
@@ -34,23 +34,18 @@ jobs:
           find login-service/target/classes -name "application.cdx.json" -exec cp {} sboms/login-service.cdx.json \;
           find api-gateway/target/classes -name "application.cdx.json" -exec cp {} sboms/api-gateway.cdx.json \;
 
-      # 4) Instala CycloneDX CLI e valida/converte SBOMs
+      # 4) Converte SBOMs para formato JSON puro e compatível
       - name: Normalize SBOMs (CycloneDX CLI)
         run: |
-          echo "Instalando CycloneDX CLI..."
           wget -q https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.27.1/cyclonedx-linux-x64 -O cyclonedx
           chmod +x cyclonedx
 
-          echo "Normalizando SBOMs..."
-          ./cyclonedx validate --input-file sboms/login-service.cdx.json || true
           ./cyclonedx convert --input-file sboms/login-service.cdx.json --output-file login-service/target/bom.json --output-format json
-
-          ./cyclonedx validate --input-file sboms/api-gateway.cdx.json || true
           ./cyclonedx convert --input-file sboms/api-gateway.cdx.json --output-file api-gateway/target/bom.json --output-format json
 
           ls -lh login-service/target/bom.json api-gateway/target/bom.json
 
-      # 5) Upload dos SBOMs
+      # 5) Upload SBOMs como artefatos
       - name: Upload SBOMs
         uses: actions/upload-artifact@v4
         with:
@@ -59,28 +54,23 @@ jobs:
             login-service/target/bom.json
             api-gateway/target/bom.json
 
-      # 6) Scans Trivy (agora reconhece formato)
-      - name: Trivy SBOM scan (login-service)
-        uses: aquasecurity/trivy-action@0.28.0
-        with:
-          scan-type: sbom
-          input: login-service/target/bom.json
-          format: sarif
-          output: trivy-login.sarif
-          severity: HIGH,CRITICAL
-          exit-code: "0"
+      # 6) Instalação manual do Trivy + Scan direto
+      - name: Install Trivy
+        run: |
+          wget -q https://github.com/aquasecurity/trivy/releases/download/v0.56.1/trivy_0.56.1_Linux-64bit.tar.gz
+          tar -xzf trivy_0.56.1_Linux-64bit.tar.gz
+          sudo mv trivy /usr/local/bin/
+          trivy --version
 
-      - name: Trivy SBOM scan (api-gateway)
-        uses: aquasecurity/trivy-action@0.28.0
-        with:
-          scan-type: sbom
-          input: api-gateway/target/bom.json
-          format: sarif
-          output: trivy-gateway.sarif
-          severity: HIGH,CRITICAL
-          exit-code: "0"
+      - name: Trivy SBOM Scan (login-service)
+        run: |
+          trivy sbom --input login-service/target/bom.json --format sarif --output trivy-login.sarif --severity HIGH,CRITICAL || true
 
-      # 7) Upload SARIFs
+      - name: Trivy SBOM Scan (api-gateway)
+        run: |
+          trivy sbom --input api-gateway/target/bom.json --format sarif --output trivy-gateway.sarif --severity HIGH,CRITICAL || true
+
+      # 7) Upload dos relatórios SARIF
       - name: Upload SARIF (login-service)
         uses: github/codeql-action/upload-sarif@v3
         with:
@@ -91,7 +81,7 @@ jobs:
         with:
           sarif_file: trivy-gateway.sarif
 
-      # 8) Testes unitários e relatório
+      # 8) Testes e relatório Surefire
       - name: Run Unit Tests
         run: mvn -f login-service/pom.xml test -Dsurefire.reportFormat=plain
 
