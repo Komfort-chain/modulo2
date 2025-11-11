@@ -185,10 +185,11 @@ Executa a varredura semântica de vulnerabilidades em tempo de build, conforme a
 
 As imagens geradas pelo pipeline estão disponíveis no **repositório oficial da organização Komfort Chain** e são publicadas automaticamente a cada *push* na branch `main`.
 
-| Serviço       | Localização no Repositório                               |
-| ------------- | -------------------------------------------------------- |
-| Login Service | [`login-service/Dockerfile`](./login-service/Dockerfile) |
-| API Gateway   | [`api-gateway/Dockerfile`](./api-gateway/Dockerfile)     |
+| Serviço        | Repositório Docker Hub                                                                 |
+|----------------|------------------------------------------------------------------------------------------|
+| API Gateway    | [magyodev/api-gateway](https://hub.docker.com/repository/docker/magyodev/api-gateway)   |
+| Login Service  | [magyodev/login-service](https://hub.docker.com/repository/docker/magyodev/login-service) |
+
 
 Cada módulo contém seu próprio `Dockerfile` e é construído e versionado de forma independente dentro do pipeline CI/CD (`.github/workflows/full-ci.yml`).
 
