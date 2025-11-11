@@ -15,7 +15,7 @@ jobs:
       # 1. Checkout
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Necessário para melhor análise do histórico
+          fetch-depth: 0  # Necessário para melhor análise do histórico
 
       # 2. JDK
       - name: Setup JDK 21
@@ -39,8 +39,9 @@ jobs:
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
           restore-keys: ${{ runner.os }}-m2
 
-      # 4. Build e análise com SonarCloud
+      # 4. Build e análise com SonarCloud (rodando no módulo login-service)
       - name: Build and analyze (SonarCloud)
+        working-directory: login-service
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
