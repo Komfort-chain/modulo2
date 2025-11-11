@@ -183,6 +183,15 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      # Empacotamento Maven para gerar os .jar antes do build
+      - name: Package Login Service
+        working-directory: login-service
+        run: mvn -B clean package -DskipTests=true
+
+      - name: Package API Gateway
+        working-directory: api-gateway
+        run: mvn -B clean package -DskipTests=true
+
       - name: Build and push Login Service image
         uses: docker/build-push-action@v5
         with:
