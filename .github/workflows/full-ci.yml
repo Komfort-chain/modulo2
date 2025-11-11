@@ -100,7 +100,7 @@ jobs:
             api-gateway/target/surefire-reports/
 
   # --------------------------------------------------------
-  # JOB 2 — OWASP Dependency Check (com fallback e NVD key)
+  # JOB 2 — OWASP Dependency-Check (com cache e fallback)
   # --------------------------------------------------------
   security-scan:
     name: OWASP Dependency-Check (Vulnerability Audit)
@@ -109,6 +109,9 @@ jobs:
 
     permissions:
       contents: read
+
+    env:
+      NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
 
     steps:
       - name: Checkout repository
@@ -120,6 +123,7 @@ jobs:
           java-version: 21
           distribution: temurin
 
+      # Cache Maven dependências
       - name: Cache Maven packages
         uses: actions/cache@v4
         with:
@@ -127,60 +131,74 @@ jobs:
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
           restore-keys: ${{ runner.os }}-m2
 
+      # Cache da base de dados NVD (para acelerar execuções futuras)
+      - name: Cache Dependency-Check Data
+        uses: actions/cache@v4
+        with:
+          path: ~/.dependency-check-data
+          key: ${{ runner.os }}-depcheck
+          restore-keys: ${{ runner.os }}-depcheck
+
       - name: Install OWASP Dependency-Check
         run: |
           curl -sL https://github.com/jeremylong/DependencyCheck/releases/download/v10.0.3/dependency-check-10.0.3-release.zip -o depcheck.zip
           unzip -q depcheck.zip -d $HOME/depcheck
 
+      # --- LOGIN SERVICE ---
       - name: Run OWASP Dependency-Check (Login Service)
-        env:
-          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
         run: |
           mkdir -p reports/login-service
-          echo "Executando Dependency-Check (Login Service)..."
-          set +e
-          $HOME/depcheck/dependency-check/bin/dependency-check.sh \
-            --project "Login Service" \
-            --scan login-service \
-            --format "ALL" \
-            --out reports/login-service \
-            --nvdApiKey "$NVD_API_KEY" || \
-          (echo "Falha na atualização NVD — executando em modo offline (--noupdate)" && \
-          $HOME/depcheck/dependency-check/bin/dependency-check.sh \
-            --project "Login Service" \
-            --scan login-service \
-            --format "ALL" \
-            --out reports/login-service \
-            --noupdate)
-          set -e
+          echo "Verificando Login Service..."
+          if [ -z "$NVD_API_KEY" ]; then
+            echo "Nenhuma NVD_API_KEY detectada — rodando em modo offline (--noupdate)"
+            $HOME/depcheck/dependency-check/bin/dependency-check.sh \
+              --project "Login Service" \
+              --data ~/.dependency-check-data \
+              --scan login-service \
+              --format "ALL" \
+              --out reports/login-service \
+              --noupdate
+          else
+            echo "NVD_API_KEY detectada — rodando com API"
+            $HOME/depcheck/dependency-check/bin/dependency-check.sh \
+              --project "Login Service" \
+              --data ~/.dependency-check-data \
+              --scan login-service \
+              --format "ALL" \
+              --out reports/login-service
+          fi
 
+      # --- API GATEWAY ---
       - name: Run OWASP Dependency-Check (API Gateway)
-        env:
-          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
         run: |
           mkdir -p reports/api-gateway
-          echo "Executando Dependency-Check (API Gateway)..."
-          set +e
-          $HOME/depcheck/dependency-check/bin/dependency-check.sh \
-            --project "API Gateway" \
-            --scan api-gateway \
-            --format "ALL" \
-            --out reports/api-gateway \
-            --nvdApiKey "$NVD_API_KEY" || \
-          (echo "Falha na atualização NVD — executando em modo offline (--noupdate)" && \
-          $HOME/depcheck/dependency-check/bin/dependency-check.sh \
-            --project "API Gateway" \
-            --scan api-gateway \
-            --format "ALL" \
-            --out reports/api-gateway \
-            --noupdate)
-          set -e
+          echo "Verificando API Gateway..."
+          if [ -z "$NVD_API_KEY" ]; then
+            echo "Nenhuma NVD_API_KEY detectada — rodando em modo offline (--noupdate)"
+            $HOME/depcheck/dependency-check/bin/dependency-check.sh \
+              --project "API Gateway" \
+              --data ~/.dependency-check-data \
+              --scan api-gateway \
+              --format "ALL" \
+              --out reports/api-gateway \
+              --noupdate
+          else
+            echo "NVD_API_KEY detectada — rodando com API"
+            $HOME/depcheck/dependency-check/bin/dependency-check.sh \
+              --project "API Gateway" \
+              --data ~/.dependency-check-data \
+              --scan api-gateway \
+              --format "ALL" \
+              --out reports/api-gateway
+          fi
 
+      # Upload de relatórios
       - name: Upload Dependency-Check Reports
         uses: actions/upload-artifact@v4
         with:
           name: dependency-check-reports
           path: reports/
+
 
   # --------------------------------------------------------
   # JOB 3 — Docker Build & Push
