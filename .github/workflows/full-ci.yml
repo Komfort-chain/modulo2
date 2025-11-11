@@ -92,7 +92,7 @@ jobs:
             api-gateway/target/surefire-reports/
 
   # --------------------------------------------------------
-  # JOB 2 — OWASP Dependency-Check (corrigido com export)
+  # JOB 2 — OWASP Dependency-Check (corrigido com JAVA_TOOL_OPTIONS)
   # --------------------------------------------------------
   security-scan:
     name: OWASP Dependency-Check (Vulnerability Audit)
@@ -104,6 +104,7 @@ jobs:
 
     env:
       NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+      JAVA_TOOL_OPTIONS: "-Dnvd.api.key=${{ secrets.NVD_API_KEY }}"
 
     steps:
       - name: Checkout repository
@@ -158,8 +159,6 @@ jobs:
               --noupdate
           else
             echo "Rodando com API Key."
-            export NVD_API_KEY=$NVD_API_KEY
-            env | grep NVD_API_KEY
             $HOME/depcheck/dependency-check/bin/dependency-check.sh \
               --project "Login Service" \
               --data ~/.dependency-check-data \
@@ -183,8 +182,6 @@ jobs:
               --noupdate
           else
             echo "Rodando com API Key."
-            export NVD_API_KEY=$NVD_API_KEY
-            env | grep NVD_API_KEY
             $HOME/depcheck/dependency-check/bin/dependency-check.sh \
               --project "API Gateway" \
               --data ~/.dependency-check-data \
