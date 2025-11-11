@@ -1,86 +1,52 @@
-name: Login API - CI Pipeline (Build + Test + Sonar + Trivy)
+name: Login API - CI Security + SonarCloud
 
 on:
   push:
     branches: ["main"]
   pull_request:
+    types: [opened, synchronize, reopened]
 
 jobs:
-  build-test-analyze:
+  build-and-analyze:
+    name: Build and Analyze (SonarCloud)
     runs-on: ubuntu-latest
 
-    permissions:
-      contents: read
-      security-events: write
-
     steps:
-      # 1) Checkout do repositório
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      # 1. Checkout
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Necessário para melhor análise do histórico
 
-      # 2) Setup JDK 21
+      # 2. JDK
       - name: Setup JDK 21
         uses: actions/setup-java@v4
         with:
-          distribution: temurin
           java-version: 21
+          distribution: temurin
 
-      # 3) Cache Maven para acelerar builds
-      - name: Cache Maven dependencies
+      # 3. Cache do Sonar e Maven
+      - name: Cache SonarQube packages
         uses: actions/cache@v4
         with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-maven-
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
 
-      # 4) Build + Testes unitários
-      - name: Build and Run Tests
-        run: |
-          mvn -f login-service/pom.xml clean verify -Dsurefire.reportFormat=plain
-
-      # 5) Gerar relatório HTML de testes
-      - name: Generate Surefire HTML Report
-        if: success() || failure()
-        run: |
-          mvn -f login-service/pom.xml surefire-report:report-only
-          mvn -f login-service/pom.xml site -DgenerateReports=false
-
-      # 6) Upload do relatório de testes
-      - name: Upload Surefire Report
-        if: success() || failure()
-        uses: actions/upload-artifact@v4
+      - name: Cache Maven packages
+        uses: actions/cache@v4
         with:
-          name: surefire-test-report
-          path: login-service/target/site/
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
 
-      # 7) Análise de qualidade e cobertura com SonarQube
-      - name: SonarQube Scan
+      # 4. Build e análise com SonarCloud
+      - name: Build and analyze (SonarCloud)
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          echo "Executando análise no SonarQube..."
-          mvn -f login-service/pom.xml verify sonar:sonar \
-            -Dsonar.projectKey=login-service \
-            -Dsonar.organization=${{ secrets.SONAR_ORG }} \
-            -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
-            -Dsonar.login=${{ secrets.SONAR_TOKEN }} \
-            -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml \
-            -DskipTests=true
-
-      # 8) Varredura de vulnerabilidades em dependências com Trivy
-      - name: Trivy Dependency Scan
-        uses: aquasecurity/trivy-action@0.28.0
-        with:
-          scan-type: fs
-          scan-ref: ./login-service
-          format: sarif
-          output: trivy-login.sarif
-          severity: HIGH,CRITICAL
-          exit-code: "0" # não quebra o build
-
-      # 9) Upload dos resultados de vulnerabilidade (para Security Tab)
-      - name: Upload SARIF to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: trivy-login.sarif
+          echo "Executando análise no SonarCloud..."
+          mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
+            -Dsonar.projectKey=Komfort-chain_modulo2 \
+            -Dsonar.organization=komfort-chain \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
