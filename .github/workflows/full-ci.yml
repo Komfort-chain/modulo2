@@ -92,7 +92,7 @@ jobs:
             api-gateway/target/surefire-reports/
 
   # --------------------------------------------------------
-  # JOB 2 — OWASP Dependency-Check (corrigido com JAVA_TOOL_OPTIONS)
+  # JOB 2 — OWASP Dependency-Check (corrigido v10.0.4 + purge + cache fix)
   # --------------------------------------------------------
   security-scan:
     name: OWASP Dependency-Check (Vulnerability Audit)
@@ -123,23 +123,22 @@ jobs:
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
           restore-keys: ${{ runner.os }}-m2
 
-      - name: Cache Dependency-Check Data
-        uses: actions/cache@v4
-        with:
-          path: ~/.dependency-check-data
-          key: ${{ runner.os }}-depcheck
-          restore-keys: ${{ runner.os }}-depcheck
-
-      - name: Install OWASP Dependency-Check
+      - name: Reset Dependency-Check cache (avoid corrupted H2)
         run: |
-          curl -sL https://github.com/jeremylong/DependencyCheck/releases/download/v10.0.3/dependency-check-10.0.3-release.zip -o depcheck.zip
+          echo "Limpando cache corrompido de Dependency-Check..."
+          rm -rf ~/.dependency-check-data || true
+          mkdir -p ~/.dependency-check-data
+
+      - name: Install OWASP Dependency-Check (v10.0.4)
+        run: |
+          curl -sL https://github.com/jeremylong/DependencyCheck/releases/download/v10.0.4/dependency-check-10.0.4-release.zip -o depcheck.zip
           unzip -q depcheck.zip -d $HOME/depcheck
 
       - name: Verificar NVD_API_KEY
         run: |
           if [ -z "$NVD_API_KEY" ]; then
             echo "NVD_API_KEY não encontrada. Verifique se o Secret foi criado em Settings > Secrets and variables > Actions > Secrets."
-            echo "O job continuará em modo offline (--noupdate)."
+            echo "Rodando em modo offline (--noupdate)."
           else
             echo "NVD_API_KEY detectada (tamanho: ${#NVD_API_KEY} caracteres)."
           fi
@@ -148,47 +147,25 @@ jobs:
         run: |
           mkdir -p reports/login-service
           echo "Verificando Login Service..."
-          if [ -z "$NVD_API_KEY" ]; then
-            echo "Rodando em modo offline (--noupdate)."
-            $HOME/depcheck/dependency-check/bin/dependency-check.sh \
-              --project "Login Service" \
-              --data ~/.dependency-check-data \
-              --scan login-service \
-              --format "ALL" \
-              --out reports/login-service \
-              --noupdate
-          else
-            echo "Rodando com API Key."
-            $HOME/depcheck/dependency-check/bin/dependency-check.sh \
-              --project "Login Service" \
-              --data ~/.dependency-check-data \
-              --scan login-service \
-              --format "ALL" \
-              --out reports/login-service
-          fi
+          $HOME/depcheck/dependency-check/bin/dependency-check.sh \
+            --project "Login Service" \
+            --data ~/.dependency-check-data \
+            --scan login-service \
+            --format "ALL" \
+            --out reports/login-service \
+            --purge
 
       - name: Run OWASP Dependency-Check (API Gateway)
         run: |
           mkdir -p reports/api-gateway
           echo "Verificando API Gateway..."
-          if [ -z "$NVD_API_KEY" ]; then
-            echo "Rodando em modo offline (--noupdate)."
-            $HOME/depcheck/dependency-check/bin/dependency-check.sh \
-              --project "API Gateway" \
-              --data ~/.dependency-check-data \
-              --scan api-gateway \
-              --format "ALL" \
-              --out reports/api-gateway \
-              --noupdate
-          else
-            echo "Rodando com API Key."
-            $HOME/depcheck/dependency-check/bin/dependency-check.sh \
-              --project "API Gateway" \
-              --data ~/.dependency-check-data \
-              --scan api-gateway \
-              --format "ALL" \
-              --out reports/api-gateway
-          fi
+          $HOME/depcheck/dependency-check/bin/dependency-check.sh \
+            --project "API Gateway" \
+            --data ~/.dependency-check-data \
+            --scan api-gateway \
+            --format "ALL" \
+            --out reports/api-gateway \
+            --purge
 
       - name: Upload Dependency-Check Reports
         uses: actions/upload-artifact@v4
