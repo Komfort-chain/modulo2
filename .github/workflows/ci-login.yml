@@ -29,9 +29,14 @@ jobs:
         run: |
           mvn -f login-service/pom.xml clean package -DskipTests
           mvn -f api-gateway/pom.xml clean package -DskipTests
-          echo "Verificando SBOMs gerados..."
-          find login-service/target -type f -name "*cyclonedx.json" || echo "SBOM não encontrado no login-service"
-          find api-gateway/target -type f -name "*cyclonedx.json" || echo "SBOM não encontrado no api-gateway"
+
+          echo "Copiando SBOMs para o formato esperado..."
+          # Copia CycloneDX JSON gerado pelo plugin
+          find login-service/target/classes -name "application.cdx.json" -exec cp {} login-service/target/bom.json \; || echo "SBOM do login-service não encontrado"
+          find api-gateway/target/classes -name "application.cdx.json" -exec cp {} api-gateway/target/bom.json \; || echo "SBOM do api-gateway não encontrado"
+
+          ls -lh login-service/target/ | grep bom || true
+          ls -lh api-gateway/target/ | grep bom || true
 
       # 4) Upload dos SBOMs como artefatos
       - name: Upload SBOMs
@@ -39,15 +44,15 @@ jobs:
         with:
           name: sboms
           path: |
-            login-service/target/**/cyclonedx.json
-            api-gateway/target/**/cyclonedx.json
+            login-service/target/bom.json
+            api-gateway/target/bom.json
 
       # 5) Varredura de vulnerabilidades com Trivy (baseada no SBOM)
       - name: Trivy SBOM scan (login-service)
         uses: aquasecurity/trivy-action@0.28.0
         with:
           scan-type: sbom
-          input: $(find login-service/target -type f -name "*cyclonedx.json" | head -n 1)
+          input: login-service/target/bom.json
           format: sarif
           output: trivy-login.sarif
           severity: HIGH,CRITICAL
@@ -57,7 +62,7 @@ jobs:
         uses: aquasecurity/trivy-action@0.28.0
         with:
           scan-type: sbom
-          input: $(find api-gateway/target -type f -name "*cyclonedx.json" | head -n 1)
+          input: api-gateway/target/bom.json
           format: sarif
           output: trivy-gateway.sarif
           severity: HIGH,CRITICAL
