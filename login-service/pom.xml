@@ -20,6 +20,8 @@
 
     <properties>
         <java.version>21</java.version>
+        <sonar.organization>komfort-chain</sonar.organization>
+        <sonar.projectKey>Komfort-chain_modulo2</sonar.projectKey>
     </properties>
 
     <dependencies>
@@ -89,24 +91,11 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.junit.vintage</groupId>
-                    <artifactId>junit-vintage-engine</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
-
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
             <version>5.10.0</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.springframework.security</groupId>
-            <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -133,10 +122,25 @@
                 </configuration>
             </plugin>
 
-            <!-- Plugin do Spring Boot -->
+            <!-- JaCoCo para cobertura -->
             <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.8.12</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
 
             <!-- CycloneDX SBOM -->
@@ -152,13 +156,12 @@
                         </goals>
                     </execution>
                 </executions>
-                <configuration>
-                    <schemaVersion>1.5</schemaVersion>
-                    <outputFormat>json</outputFormat>
-                    <outputName>bom</outputName>
-                    <includeBomSerialNumber>true</includeBomSerialNumber>
-                    <includeLicenseText>false</includeLicenseText>
-                </configuration>
+            </plugin>
+
+            <!-- Spring Boot -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
         </plugins>
     </build>

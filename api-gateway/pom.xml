@@ -75,15 +75,33 @@
         </dependencies>
     </dependencyManagement>
 
-    <build>
+     <build>
         <plugins>
-            <!-- Spring Boot -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
 
-            <!-- CycloneDX SBOM -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.8.12</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
             <plugin>
                 <groupId>org.cyclonedx</groupId>
                 <artifactId>cyclonedx-maven-plugin</artifactId>
@@ -96,13 +114,6 @@
                         </goals>
                     </execution>
                 </executions>
-                <configuration>
-                    <schemaVersion>1.5</schemaVersion>
-                    <outputFormat>json</outputFormat>
-                    <outputName>bom</outputName>
-                    <includeBomSerialNumber>true</includeBomSerialNumber>
-                    <includeLicenseText>false</includeLicenseText>
-                </configuration>
             </plugin>
         </plugins>
     </build>
