@@ -30,13 +30,21 @@ jobs:
           mvn -f login-service/pom.xml clean package -DskipTests
           mvn -f api-gateway/pom.xml clean package -DskipTests
 
-          echo "Copiando SBOMs para o formato esperado..."
-          # Copia CycloneDX JSON gerado pelo plugin
-          find login-service/target/classes -name "application.cdx.json" -exec cp {} login-service/target/bom.json \; || echo "SBOM do login-service não encontrado"
-          find api-gateway/target/classes -name "application.cdx.json" -exec cp {} api-gateway/target/bom.json \; || echo "SBOM do api-gateway não encontrado"
+          echo "Copiando SBOMs para local padrão..."
+          find login-service/target/classes -name "application.cdx.json" -exec cp {} login-service/target/bom.json \; || echo "SBOM não encontrado no login-service"
+          find api-gateway/target/classes -name "application.cdx.json" -exec cp {} api-gateway/target/bom.json \; || echo "SBOM não encontrado no api-gateway"
 
-          ls -lh login-service/target/ | grep bom || true
-          ls -lh api-gateway/target/ | grep bom || true
+          echo "Adicionando campo 'bomFormat': 'CycloneDX' para compatibilidade com Trivy..."
+          sudo apt-get install -y jq
+          for file in login-service/target/bom.json api-gateway/target/bom.json; do
+            if [ -f "$file" ]; then
+              jq '. + {"bomFormat": "CycloneDX"}' "$file" > tmp.$$.json && mv tmp.$$.json "$file"
+            fi
+          done
+
+          echo "SBOMs prontos para o scan:"
+          ls -lh login-service/target/bom.json || true
+          ls -lh api-gateway/target/bom.json || true
 
       # 4) Upload dos SBOMs como artefatos
       - name: Upload SBOMs
@@ -56,7 +64,7 @@ jobs:
           format: sarif
           output: trivy-login.sarif
           severity: HIGH,CRITICAL
-          exit-code: "0" # não interrompe o pipeline
+          exit-code: "0" # apenas reporta
 
       - name: Trivy SBOM scan (api-gateway)
         uses: aquasecurity/trivy-action@0.28.0
