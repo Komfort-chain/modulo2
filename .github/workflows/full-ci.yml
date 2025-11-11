@@ -100,7 +100,7 @@ jobs:
             api-gateway/target/surefire-reports/
 
   # --------------------------------------------------------
-  # JOB 2 — OWASP Dependency Check
+  # JOB 2 — OWASP Dependency Check (com fallback e NVD key)
   # --------------------------------------------------------
   security-scan:
     name: OWASP Dependency-Check (Vulnerability Audit)
@@ -133,23 +133,48 @@ jobs:
           unzip -q depcheck.zip -d $HOME/depcheck
 
       - name: Run OWASP Dependency-Check (Login Service)
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
         run: |
           mkdir -p reports/login-service
+          echo "Executando Dependency-Check (Login Service)..."
+          set +e
           $HOME/depcheck/dependency-check/bin/dependency-check.sh \
             --project "Login Service" \
             --scan login-service \
             --format "ALL" \
-            --out reports/login-service
+            --out reports/login-service \
+            --nvdApiKey "$NVD_API_KEY" || \
+          (echo "Falha na atualização NVD — executando em modo offline (--noupdate)" && \
+          $HOME/depcheck/dependency-check/bin/dependency-check.sh \
+            --project "Login Service" \
+            --scan login-service \
+            --format "ALL" \
+            --out reports/login-service \
+            --noupdate)
+          set -e
 
       - name: Run OWASP Dependency-Check (API Gateway)
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
         run: |
           mkdir -p reports/api-gateway
+          echo "Executando Dependency-Check (API Gateway)..."
+          set +e
           $HOME/depcheck/dependency-check/bin/dependency-check.sh \
             --project "API Gateway" \
             --scan api-gateway \
             --format "ALL" \
-            --out reports/api-gateway
-
+            --out reports/api-gateway \
+            --nvdApiKey "$NVD_API_KEY" || \
+          (echo "Falha na atualização NVD — executando em modo offline (--noupdate)" && \
+          $HOME/depcheck/dependency-check/bin/dependency-check.sh \
+            --project "API Gateway" \
+            --scan api-gateway \
+            --format "ALL" \
+            --out reports/api-gateway \
+            --noupdate)
+          set -e
 
       - name: Upload Dependency-Check Reports
         uses: actions/upload-artifact@v4
