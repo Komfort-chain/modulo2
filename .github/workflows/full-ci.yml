@@ -171,11 +171,13 @@ jobs:
                 -Danalyzer.nvd.api.enabled=false
             )
 
+      # 🔹 Correção: Upload recursivo garante que todos relatórios OWASP sejam encontrados
       - name: Upload Dependency-Check Reports
         uses: actions/upload-artifact@v4
         with:
           name: dependency-check-reports
-          path: reports/
+          path: '**/reports/**'
+          if-no-files-found: ignore
 
   # --------------------------------------------------------
   # JOB 3 — Docker Build & Push
