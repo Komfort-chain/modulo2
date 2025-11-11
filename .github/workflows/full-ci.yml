@@ -64,7 +64,7 @@ jobs:
           cp login-service/target/site/jacoco/jacoco.xml target/jacoco-aggregate/login-service.xml || true
           cp api-gateway/target/site/jacoco/jacoco.xml target/jacoco-aggregate/api-gateway.xml || true
 
-      # 7. Análise no SonarCloud (rodando dentro do módulo principal)
+      # 7. Análise no SonarCloud
       - name: SonarCloud Analysis
         working-directory: login-service
         env:
@@ -100,7 +100,7 @@ jobs:
             api-gateway/target/surefire-reports/
 
   # --------------------------------------------------------
-  # JOB 2 — OWASP Dependency-Check (com cache e fallback)
+  # JOB 2 — OWASP Dependency-Check (com verificação e fallback)
   # --------------------------------------------------------
   security-scan:
     name: OWASP Dependency-Check (Vulnerability Audit)
@@ -131,7 +131,7 @@ jobs:
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
           restore-keys: ${{ runner.os }}-m2
 
-      # Cache da base de dados NVD (para acelerar execuções futuras)
+      # Cache da base de dados NVD
       - name: Cache Dependency-Check Data
         uses: actions/cache@v4
         with:
@@ -144,13 +144,23 @@ jobs:
           curl -sL https://github.com/jeremylong/DependencyCheck/releases/download/v10.0.3/dependency-check-10.0.3-release.zip -o depcheck.zip
           unzip -q depcheck.zip -d $HOME/depcheck
 
+      # Verificar se o Secret está disponível
+      - name: Verificar NVD_API_KEY
+        run: |
+          if [ -z "$NVD_API_KEY" ]; then
+            echo "NVD_API_KEY não encontrada. Verifique se o Secret foi criado em Settings > Secrets and variables > Actions > Secrets."
+            echo "O job continuará em modo offline (--noupdate)."
+          else
+            echo "NVD_API_KEY detectada (tamanho: ${#NVD_API_KEY} caracteres)."
+          fi
+
       # --- LOGIN SERVICE ---
       - name: Run OWASP Dependency-Check (Login Service)
         run: |
           mkdir -p reports/login-service
           echo "Verificando Login Service..."
           if [ -z "$NVD_API_KEY" ]; then
-            echo "Nenhuma NVD_API_KEY detectada — rodando em modo offline (--noupdate)"
+            echo "Rodando em modo offline (--noupdate)."
             $HOME/depcheck/dependency-check/bin/dependency-check.sh \
               --project "Login Service" \
               --data ~/.dependency-check-data \
@@ -159,7 +169,7 @@ jobs:
               --out reports/login-service \
               --noupdate
           else
-            echo "NVD_API_KEY detectada — rodando com API"
+            echo "Rodando com API Key."
             $HOME/depcheck/dependency-check/bin/dependency-check.sh \
               --project "Login Service" \
               --data ~/.dependency-check-data \
@@ -174,7 +184,7 @@ jobs:
           mkdir -p reports/api-gateway
           echo "Verificando API Gateway..."
           if [ -z "$NVD_API_KEY" ]; then
-            echo "Nenhuma NVD_API_KEY detectada — rodando em modo offline (--noupdate)"
+            echo "Rodando em modo offline (--noupdate)."
             $HOME/depcheck/dependency-check/bin/dependency-check.sh \
               --project "API Gateway" \
               --data ~/.dependency-check-data \
@@ -183,7 +193,7 @@ jobs:
               --out reports/api-gateway \
               --noupdate
           else
-            echo "NVD_API_KEY detectada — rodando com API"
+            echo "Rodando com API Key."
             $HOME/depcheck/dependency-check/bin/dependency-check.sh \
               --project "API Gateway" \
               --data ~/.dependency-check-data \
@@ -198,7 +208,6 @@ jobs:
         with:
           name: dependency-check-reports
           path: reports/
-
 
   # --------------------------------------------------------
   # JOB 3 — Docker Build & Push
