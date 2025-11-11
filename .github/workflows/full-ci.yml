@@ -92,7 +92,7 @@ jobs:
             api-gateway/target/surefire-reports/
 
   # --------------------------------------------------------
-  # JOB 2 — OWASP Dependency-Check (v10.0.4 - single-threaded fix)
+  # JOB 2 — OWASP Dependency-Check (v10.0.4 - corrigido e estável)
   # --------------------------------------------------------
   security-scan:
     name: OWASP Dependency-Check (Vulnerability Audit)
@@ -127,15 +127,13 @@ jobs:
           curl -sL https://github.com/jeremylong/DependencyCheck/releases/download/v10.0.4/dependency-check-10.0.4-release.zip -o depcheck.zip
           unzip -q depcheck.zip -d $HOME/depcheck
 
-      - name: Download and initialize NVD (single-thread)
+      - name: Update NVD Data
         run: |
-          echo "Inicializando cache NVD (sem paralelismo)..."
+          echo "Inicializando cache NVD..."
           $HOME/depcheck/dependency-check/bin/dependency-check.sh \
             --updateonly \
             --data ~/.dependency-check-data \
-            --nvdApiKey "$NVD_API_KEY" \
-            --nvdMaxRetryCount 3 \
-            --nvdMaxDownloadThreadCount 1
+            --nvdApiKey "$NVD_API_KEY"
 
       - name: Run OWASP Dependency-Check (Login Service)
         run: |
@@ -147,7 +145,7 @@ jobs:
             --scan login-service \
             --format "ALL" \
             --out reports/login-service \
-            --nvdMaxDownloadThreadCount 1
+            --nvdApiKey "$NVD_API_KEY"
 
       - name: Run OWASP Dependency-Check (API Gateway)
         run: |
@@ -159,7 +157,7 @@ jobs:
             --scan api-gateway \
             --format "ALL" \
             --out reports/api-gateway \
-            --nvdMaxDownloadThreadCount 1
+            --nvdApiKey "$NVD_API_KEY"
 
       - name: Upload Dependency-Check Reports
         uses: actions/upload-artifact@v4
