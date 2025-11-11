@@ -14,17 +14,17 @@ jobs:
       security-events: write # necessário para subir SARIF
 
     steps:
-      # 1) Checkout
+      # 1) Checkout do código
       - uses: actions/checkout@v4
 
-      # 2) JDK 21
+      # 2) Configuração do JDK 21
       - name: Setup JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 21
 
-      # 3) Build + gera SBOM (CycloneDX) para ambos os módulos
+      # 3) Build + geração de SBOM (CycloneDX)
       - name: Build modules (package + SBOM)
         run: |
           mvn -f login-service/pom.xml clean package -DskipTests
@@ -32,7 +32,7 @@ jobs:
           test -f login-service/target/bom.json
           test -f api-gateway/target/bom.json
 
-      # 4) Publica SBOM como artefato
+      # 4) Upload dos SBOMs como artefatos
       - name: Upload SBOMs
         uses: actions/upload-artifact@v4
         with:
@@ -41,7 +41,7 @@ jobs:
             login-service/target/bom.json
             api-gateway/target/bom.json
 
-      # 5) Scans com Trivy (usa SBOM CycloneDX) -> SARIF para code scanning
+      # 5) Varredura de vulnerabilidades com Trivy (baseada no SBOM)
       - name: Trivy SBOM scan (login-service)
         uses: aquasecurity/trivy-action@0.28.0
         with:
@@ -50,7 +50,7 @@ jobs:
           format: sarif
           output: trivy-login.sarif
           severity: HIGH,CRITICAL
-          exit-code: "0" # não falha o job; só reporta
+          exit-code: "0" # não interrompe o pipeline
 
       - name: Trivy SBOM scan (api-gateway)
         uses: aquasecurity/trivy-action@0.28.0
@@ -62,18 +62,18 @@ jobs:
           severity: HIGH,CRITICAL
           exit-code: "0"
 
-      # 6) Sobe SARIF (aparece em Security > Code scanning alerts)
+      # 6) Upload dos relatórios SARIF para o GitHub Code Scanning
       - name: Upload SARIF (login-service)
-        uses: github/code-scanning/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: trivy-login.sarif
 
       - name: Upload SARIF (api-gateway)
-        uses: github/code-scanning/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: trivy-gateway.sarif
 
-      # 7) Testes unitários + relatório Surefire (como antes)
+      # 7) Testes unitários e relatório Surefire
       - name: Run Unit Tests
         run: mvn -f login-service/pom.xml test -Dsurefire.reportFormat=plain
 
