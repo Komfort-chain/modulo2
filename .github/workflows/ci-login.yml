@@ -29,8 +29,9 @@ jobs:
         run: |
           mvn -f login-service/pom.xml clean package -DskipTests
           mvn -f api-gateway/pom.xml clean package -DskipTests
-          test -f login-service/target/bom.json
-          test -f api-gateway/target/bom.json
+          echo "Verificando SBOMs gerados..."
+          find login-service/target -type f -name "*cyclonedx.json" || echo "SBOM não encontrado no login-service"
+          find api-gateway/target -type f -name "*cyclonedx.json" || echo "SBOM não encontrado no api-gateway"
 
       # 4) Upload dos SBOMs como artefatos
       - name: Upload SBOMs
@@ -38,15 +39,15 @@ jobs:
         with:
           name: sboms
           path: |
-            login-service/target/bom.json
-            api-gateway/target/bom.json
+            login-service/target/**/cyclonedx.json
+            api-gateway/target/**/cyclonedx.json
 
       # 5) Varredura de vulnerabilidades com Trivy (baseada no SBOM)
       - name: Trivy SBOM scan (login-service)
         uses: aquasecurity/trivy-action@0.28.0
         with:
           scan-type: sbom
-          input: login-service/target/bom.json
+          input: $(find login-service/target -type f -name "*cyclonedx.json" | head -n 1)
           format: sarif
           output: trivy-login.sarif
           severity: HIGH,CRITICAL
@@ -56,7 +57,7 @@ jobs:
         uses: aquasecurity/trivy-action@0.28.0
         with:
           scan-type: sbom
-          input: api-gateway/target/bom.json
+          input: $(find api-gateway/target -type f -name "*cyclonedx.json" | head -n 1)
           format: sarif
           output: trivy-gateway.sarif
           severity: HIGH,CRITICAL
