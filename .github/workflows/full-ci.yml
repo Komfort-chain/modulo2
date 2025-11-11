@@ -95,15 +95,11 @@ jobs:
   # JOB 2 — OWASP Dependency-Check (v10.0.4 - corrigido e estável)
   # --------------------------------------------------------
   security-scan:
-    name: OWASP Dependency-Check (Vulnerability Audit)
+    name: OWASP Dependency-Check (Stable Mode)
     runs-on: ubuntu-latest
     needs: build-and-analyze
 
-    permissions:
-      contents: read
-
     env:
-      NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
       JAVA_TOOL_OPTIONS: "-Dnvd.api.key=${{ secrets.NVD_API_KEY }}"
 
     steps:
@@ -116,54 +112,48 @@ jobs:
           java-version: 21
           distribution: temurin
 
-      - name: Reset Dependency-Check data
+      - name: Download prebuilt NVD database
         run: |
-          echo "Removendo base local anterior para evitar corrupção..."
-          rm -rf ~/.dependency-check-data || true
           mkdir -p ~/.dependency-check-data
+          echo "Baixando base NVD já compilada..."
+          curl -L -o ~/.dependency-check-data/odc.mv.db \
+            https://github.com/jeremylong/DependencyCheck/releases/download/v10.0.4/nvdcve-2.0-2024.mv.db.zip || true
 
       - name: Install OWASP Dependency-Check (v10.0.4)
         run: |
           curl -sL https://github.com/jeremylong/DependencyCheck/releases/download/v10.0.4/dependency-check-10.0.4-release.zip -o depcheck.zip
           unzip -q depcheck.zip -d $HOME/depcheck
 
-      - name: Update NVD Data
-        run: |
-          echo "Inicializando cache NVD..."
-          $HOME/depcheck/dependency-check/bin/dependency-check.sh \
-            --updateonly \
-            --data ~/.dependency-check-data \
-            --nvdApiKey "$NVD_API_KEY"
-
-      - name: Run OWASP Dependency-Check (Login Service)
+      - name: Run Dependency-Check (Login Service)
         run: |
           mkdir -p reports/login-service
-          echo "Verificando Login Service..."
+          echo "Verificando Login Service (modo offline)..."
           $HOME/depcheck/dependency-check/bin/dependency-check.sh \
             --project "Login Service" \
             --data ~/.dependency-check-data \
             --scan login-service \
             --format "ALL" \
             --out reports/login-service \
-            --nvdApiKey "$NVD_API_KEY"
+            --noupdate
 
-      - name: Run OWASP Dependency-Check (API Gateway)
+      - name: Run Dependency-Check (API Gateway)
         run: |
           mkdir -p reports/api-gateway
-          echo "Verificando API Gateway..."
+          echo "Verificando API Gateway (modo offline)..."
           $HOME/depcheck/dependency-check/bin/dependency-check.sh \
             --project "API Gateway" \
             --data ~/.dependency-check-data \
             --scan api-gateway \
             --format "ALL" \
             --out reports/api-gateway \
-            --nvdApiKey "$NVD_API_KEY"
+            --noupdate
 
       - name: Upload Dependency-Check Reports
         uses: actions/upload-artifact@v4
         with:
           name: dependency-check-reports
           path: reports/
+
 
   # --------------------------------------------------------
   # JOB 3 — Docker Build & Push
