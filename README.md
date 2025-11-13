@@ -1,76 +1,96 @@
-# Módulo 2 — Login Service & API Gateway (Komfort Chain)
+# **Módulo 2 — Login Service & API Gateway (Komfort Chain)**
 
-O **Módulo 2** da suíte **Komfort Chain** fornece a camada de **autenticação, autorização e roteamento seguro** das requisições.  
-Ele é composto por dois microserviços independentes e integrados:
+O **Módulo 2** da suíte **Komfort Chain** fornece a camada de **autenticação, autorização e roteamento seguro** de requisições.
+Ele é composto por dois microserviços independentes:
 
-- **Login Service** — responsável pela autenticação de usuários e emissão de tokens **JWT (Bearer Token)**.  
-- **API Gateway** — atua como ponto central de entrada, realizando **roteamento inteligente**, **filtro de requisições** e **validação de tokens**.
+* **Login Service** — responsável pela autenticação de usuários, geração de tokens **JWT (Bearer Token)** e acesso ao banco **PostgreSQL**.
+* **API Gateway** — atua como ponto central de entrada, executando **roteamento inteligente**, **validação de tokens**, filtragem e composição de chamadas.
 
-Ambos os serviços seguem princípios de **Clean Architecture**, **SOLID** e **RESTful APIs**, com observabilidade centralizada via **Graylog** e conformidade de segurança garantida por **SonarCloud**, **CodeQL** e **OWASP Dependency Check**.
+O módulo adota **Clean Architecture**, **SOLID**, **RESTful APIs**, observabilidade via **Graylog**, pipelines de segurança automatizados e análise contínua via **SonarCloud** e **CodeQL**.
 
 ---
 
-## Status do Projeto
+## **Status do Projeto**
 
 [![Full CI/CD](https://github.com/Komfort-chain/modulo2/actions/workflows/full-ci.yml/badge.svg)](https://github.com/Komfort-chain/modulo2/actions/workflows/full-ci.yml)
-[![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=Komfort-chain_modulo2&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Komfort-chain_modulo2)
-[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=Komfort-chain_modulo2&metric=coverage)](https://sonarcloud.io/summary/new_code?id=Komfort-chain_modulo2)
-[![Maintainability](https://sonarcloud.io/api/project_badges/measure?project=Komfort-chain_modulo2&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=Komfort-chain_modulo2)
+[![CodeQL](https://github.com/Komfort-chain/modulo2/actions/workflows/codeql.yml/badge.svg)](https://github.com/Komfort-chain/modulo2/actions/workflows/codeql.yml)
+[![Release](https://github.com/Komfort-chain/modulo2/actions/workflows/release.yml/badge.svg)](https://github.com/Komfort-chain/modulo2/actions/workflows/release.yml)
+[![Docker Hub](https://img.shields.io/badge/DockerHub-magyodev/login--service-blue)](https://hub.docker.com/repository/docker/magyodev/login-service)
+[![Docker Hub](https://img.shields.io/badge/DockerHub-magyodev/api--gateway-blue)](https://hub.docker.com/repository/docker/magyodev/api-gateway)
+[![SonarCloud](https://sonarcloud.io/api/project_badges/measure?project=Komfort-chain_modulo2\&metric=alert_status)](https://sonarcloud.io/summary/overall?id=Komfort-chain_modulo2)
+![Java 21](https://img.shields.io/badge/Java-21-red)
+![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.5.7-brightgreen)
 
 ---
 
-## Tecnologias Utilizadas
+## **Tecnologias Utilizadas**
 
-| Categoria        | Tecnologia / Ferramenta                           |
-| ---------------- | ------------------------------------------------- |
-| **Linguagem**    | Java 21                                           |
-| **Frameworks**   | Spring Boot 3.5.7 / Spring Cloud 2024.0           |
-| **Banco de Dados** | PostgreSQL 16                                   |
-| **Segurança**    | Spring Security + JWT (Bearer Token)              |
-| **Logs**         | Logback GELF → Graylog 5.1                        |
-| **Build**        | Maven Wrapper (`mvnw`)                            |
-| **Testes**       | JUnit 5 + Spring Boot Test + JaCoCo               |
-| **Análise Estática** | SonarCloud + OWASP Dependency Check + CodeQL   |
-| **Containerização** | Docker e Docker Compose                        |
-| **Arquitetura**  | Clean Architecture / SOLID / RESTful              |
+| Categoria            | Tecnologias / Ferramentas                          |
+| -------------------- | -------------------------------------------------- |
+| **Linguagem**        | Java 21                                            |
+| **Frameworks**       | Spring Boot 3.5.7 • Spring Cloud • Spring Security |
+| **Banco de Dados**   | PostgreSQL 16                                      |
+| **Autenticação**     | JWT (Bearer Token)                                 |
+| **Logs**             | Logback GELF → Graylog 5.1                         |
+| **Testes**           | JUnit 5 • Spring Boot Test • JaCoCo                |
+| **Análise Estática** | SonarCloud • CodeQL • OWASP Dependency-Check       |
+| **Build**            | Maven Wrapper                                      |
+| **Containerização**  | Docker • Docker Compose                            |
+| **Arquitetura**      | Clean Architecture • SOLID • RESTful APIs          |
 
 ---
 
-## Estrutura do Projeto
+## **Arquitetura**
 
-```bash
-modulo2/
-├── docker-compose.yml
-├── .github/workflows/
-│   ├── full-ci.yml        # CI/CD completo: build, testes, análise e publicação das imagens Docker
-│   └── codeql.yml         # Análise semântica de segurança (CodeQL)
-│
-├── api-gateway/
-│   ├── Dockerfile
-│   ├── pom.xml
-│   └── src/main/java/com/cabos/api_gateway/
-│       └── ApiGatewayApplication.java
-│
-└── login-service/
-    ├── Dockerfile
-    ├── pom.xml
-    └── src/main/java/com/cabos/login_service/
-        ├── application/
-        ├── domain/
-        ├── infrastructure/
-        │   └── security/JwtUtil.java
-        └── presentation/
-```
+O Módulo 2 é composto por dois microserviços independentes executando de forma colaborativa:
 
 ### Fluxo Arquitetural
 
 ```
-Cliente → API Gateway → Login Service → PostgreSQL
+Cliente
+   │
+   ▼
+┌──────────────┐
+│  API Gateway │  ← Valida JWT, roteia, aplica filtros
+└──────┬───────┘
+       │
+       ▼
+┌──────────────┐
+│ Login Service│  ← Autentica usuário e gera JWT
+└──────┬───────┘
+       │
+       ▼
+┌──────────────┐
+│ PostgreSQL   │  ← Armazena usuários e credenciais
+└──────────────┘
 ```
 
 ---
 
-## Execução Local
+## **Estrutura do Projeto**
+
+```
+modulo2/
+├── docker-compose.yml
+├── .github/workflows/
+│   ├── full-ci.yml          # Build • Testes • SonarCloud • OWASP • Docker Hub
+│   ├── codeql.yml           # Análise semântica de segurança
+│   └── release.yml          # Release + Docker Hub (tags semver)
+│
+├── api-gateway/
+│   ├── Dockerfile
+│   ├── pom.xml
+│   └── src/main/java/com/cabos/api_gateway/...
+│
+└── login-service/
+    ├── Dockerfile
+    ├── pom.xml
+    └── src/main/java/com/cabos/login_service/...
+```
+
+---
+
+## **Execução Local**
 
 ### 1. Clonar o repositório
 
@@ -87,35 +107,30 @@ cd ../api-gateway && ./mvnw clean package -DskipTests
 cd ..
 ```
 
-### 3. Subir a stack completa
+### 3. Subir toda a stack
 
 ```bash
 docker compose up --build -d
 ```
 
-### 4. Verificar containers ativos
+### 4. Verificar serviços
 
 ```bash
 docker ps
 ```
 
-**Serviços esperados:**
-
-| Serviço        | Porta | Descrição                            |
-|----------------|-------|--------------------------------------|
-| API Gateway    | 8080  | Entrada e roteamento de requisições  |
-| Login Service  | 8081  | Autenticação e emissão de tokens JWT |
-| PostgreSQL     | 5432  | Armazenamento de usuários            |
-| Graylog        | 9009  | Monitoramento e logs centralizados   |
-| SonarQube (*)  | 9000  | Análise estática de código           |
-
-> (*) O SonarQube é opcional, utilizado apenas durante execução local ou em pipelines de análise.
+| Serviço       | Porta | Descrição                        |
+| ------------- | ----- | -------------------------------- |
+| API Gateway   | 8080  | Roteamento e validação JWT       |
+| Login Service | 8081  | Autenticação e geração de tokens |
+| PostgreSQL    | 5432  | Banco de dados                   |
+| Graylog       | 9009  | Logs centralizados               |
 
 ---
 
-## Endpoints Principais
+## **Endpoints Principais**
 
-### Registro de Usuário
+### **Registrar usuário**
 
 ```http
 POST http://localhost:8080/login/register
@@ -132,7 +147,9 @@ Content-Type: application/json
 }
 ```
 
-### Autenticação (Login)
+---
+
+### **Autenticação**
 
 ```http
 POST http://localhost:8080/login
@@ -148,7 +165,7 @@ Content-Type: application/json
 }
 ```
 
-**Resposta:**
+**Resposta (JWT):**
 
 ```json
 {
@@ -158,79 +175,100 @@ Content-Type: application/json
 
 ---
 
-## Pipeline CI/CD
+## **Workflows CI/CD**
 
-### Workflow Principal — `full-ci.yml`
+O projeto possui **três pipelines oficiais**:
+
+---
+
+### **1. full-ci.yml — Pipeline Completo**
 
 Executa automaticamente:
 
-1. Build e testes unitários dos módulos `login-service` e `api-gateway`;  
-2. Análise estática com **SonarCloud**;  
-3. Varredura de vulnerabilidades com **OWASP Dependency Check**;  
-4. Geração e upload de relatórios de cobertura (JaCoCo);  
-5. Build e publicação das imagens Docker no **Docker Hub**.
+* Build & Test (Login + Gateway)
+* SonarCloud (cobertura, duplicações, bugs)
+* OWASP Dependency-Check
+* Upload de relatórios (JaCoCo, Surefire, OWASP)
+* Build & Push das imagens Docker:
 
-[![Full CI/CD](https://github.com/Komfort-chain/modulo2/actions/workflows/full-ci.yml/badge.svg)](https://github.com/Komfort-chain/modulo2/actions/workflows/full-ci.yml)
-
-### Workflow de Segurança — `codeql.yml`
-
-Executa a análise semântica de vulnerabilidades no código-fonte utilizando o **CodeQL**, seguindo práticas de **DevSecOps**.
-
-[![CodeQL](https://github.com/Komfort-chain/modulo2/actions/workflows/codeql.yml/badge.svg)](https://github.com/Komfort-chain/modulo2/actions/workflows/codeql.yml)
+```
+magyodev/login-service
+magyodev/api-gateway
+```
 
 ---
 
-## Imagens Docker
+### **2. codeql.yml — Análise de Segurança Avançada**
 
-As imagens oficiais do módulo são geradas e publicadas automaticamente pelo pipeline CI/CD, disponíveis no **Docker Hub**:
+Pipeline DevSecOps utilizando **CodeQL**:
 
-| Serviço        | Repositório Docker Hub                                                                 |
-|----------------|------------------------------------------------------------------------------------------|
-| API Gateway    | [magyodev/api-gateway](https://hub.docker.com/repository/docker/magyodev/api-gateway)   |
-| Login Service  | [magyodev/login-service](https://hub.docker.com/repository/docker/magyodev/login-service) |
+* Análise de vulnerabilidades semânticas
+* Dataflow analysis
+* Segurança de API e validação de token
 
-Cada módulo possui seu próprio `Dockerfile` e é construído de forma independente dentro do pipeline localizado em `.github/workflows/full-ci.yml`.
+Ideal para ambientes corporativos.
 
 ---
 
-## Logs e Monitoramento
+### **3. release.yml — Automação de Release**
 
-A observabilidade é implementada com **Logback GELF**, enviando logs estruturados em formato JSON para o **Graylog**.  
-Cada evento inclui metadados como timestamp, nível de severidade, logger e contexto de requisição.
+Executado ao criar uma tag ou release:
 
-Visualizar logs em tempo real:
+* Build completo
+* Geração de imagem Docker com tag SemVer (`v1.0.0`)
+* Publicação automática no Docker Hub
+
+---
+
+## **Imagens Docker Oficiais**
+
+| Serviço       | Docker Hub                                                                                                                         |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| API Gateway   | [https://hub.docker.com/repository/docker/magyodev/api-gateway](https://hub.docker.com/repository/docker/magyodev/api-gateway)     |
+| Login Service | [https://hub.docker.com/repository/docker/magyodev/login-service](https://hub.docker.com/repository/docker/magyodev/login-service) |
+
+Tags:
+
+* `latest`
+* `${run_number}`
+* `vX.Y.Z` (release semver)
+
+---
+
+## **Observabilidade**
+
+Logs centralizados via **Graylog**, enviados com Logback GELF.
+
+Visualizar logs:
 
 ```bash
 docker logs -f login-service
+docker logs -f api-gateway
 ```
+
+Cada entrada inclui:
+
+* Timestamp
+* Logger
+* Server
+* Nível de severidade
+* Stacktrace (se houver erro)
 
 ---
 
-## Diagrama Simplificado
+## **Contribuição**
 
-```
-┌────────────┐      ┌───────────────┐      ┌──────────────────┐
-│   Cliente  │ ───▶ │  API Gateway  │ ───▶ │  Login Service   │
-└────────────┘      └───────────────┘      └──────────────────┘
-                                     │
-                                     ▼
-                               ┌────────────┐
-                               │ PostgreSQL │
-                               └────────────┘
-```
+1. Faça um fork do projeto
+2. Crie uma branch: `feature/nova-funcionalidade`
+3. Utilize **commits semânticos profissionais**
+4. Abra um Pull Request para `main`
 
 ---
 
-## Contribuição
+## **Autor**
 
-1. Faça um fork do projeto;  
-2. Crie uma branch: `feature/nova-funcionalidade`;  
-3. Realize as alterações e utilize commits semânticos;  
-4. Envie um Pull Request para a branch `main`.
+**Alan de Lima Silva (MagyoDev)**
 
----
-
-## Autor
-
-**Alan de Lima Silva (MagyoDev)**  
-[GitHub](https://github.com/MagyoDev) • [Docker Hub](https://hub.docker.com/u/magyodev) • [E-mail](mailto:magyodev@gmail.com)
+* GitHub: [https://github.com/MagyoDev](https://github.com/MagyoDev)
+* Docker Hub: [https://hub.docker.com/u/magyodev](https://hub.docker.com/u/magyodev)
+* E-mail: [magyodev@gmail.com](mailto:magyodev@gmail.com)
