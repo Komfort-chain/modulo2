@@ -1,12 +1,12 @@
 # **Módulo 2 — Login Service & API Gateway (Komfort Chain)**
 
-O **Módulo 2** da suíte **Komfort Chain** implementa a camada de autenticação, autorização e roteamento seguro.
-Ele é composto por dois microserviços independentes, integrados por meio de um fluxo simples e claro:
+O **Módulo 2** da suíte **Komfort Chain** implementa a camada de **autenticação, autorização e roteamento seguro** da plataforma.
+Ele é formado por dois microserviços:
 
-* **Login Service**: responsável pela autenticação, geração e validação de tokens JWT e persistência de usuários.
-* **API Gateway**: ponto único de entrada que executa roteamento, controle de acesso e validação de token.
+* **Login Service**: cuida de cadastro, autenticação de usuários e geração/validação de tokens JWT.
+* **API Gateway**: atua como ponto único de entrada, validando tokens e roteando chamadas para os demais serviços.
 
-Os serviços seguem princípios de **Clean Architecture**, **SOLID** e **RESTful APIs**, mantendo observabilidade com **Graylog** e garantindo qualidade contínua com **SonarCloud**, **OWASP Dependency-Check** e automação completa via pipelines GitHub Actions.
+A estrutura foi organizada para manter **separação clara de responsabilidades**, alinhada a **Clean Architecture** e **SOLID**, com automação de qualidade via **SonarCloud**, **OWASP Dependency-Check** e pipelines GitHub Actions.
 
 ---
 
@@ -16,8 +16,8 @@ Os serviços seguem princípios de **Clean Architecture**, **SOLID** e **RESTful
 [![Release](https://github.com/Komfort-chain/modulo2/actions/workflows/release.yml/badge.svg)](https://github.com/Komfort-chain/modulo2/actions/workflows/release.yml)
 [![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=Komfort-chain_modulo2\&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Komfort-chain_modulo2)
 [![Maintainability](https://sonarcloud.io/api/project_badges/measure?project=Komfort-chain_modulo2\&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=Komfort-chain_modulo2)
-[![Docker Hub](https://img.shields.io/badge/DockerHub-magyodev/login--service-blue)](https://hub.docker.com/repository/docker/magyodev/login-service)
-[![Docker Hub](https://img.shields.io/badge/DockerHub-magyodev/api--gateway-blue)](https://hub.docker.com/repository/docker/magyodev/api-gateway)
+[![Docker Hub](https://img.shields.io/badge/DockerHub-magyodev%2Flogin--service-blue)](https://hub.docker.com/repository/docker/magyodev/login-service)
+[![Docker Hub](https://img.shields.io/badge/DockerHub-magyodev%2Fapi--gateway-blue)](https://hub.docker.com/repository/docker/magyodev/api-gateway)
 
 ---
 
@@ -40,107 +40,282 @@ Os serviços seguem princípios de **Clean Architecture**, **SOLID** e **RESTful
 
 ## **Arquitetura Geral**
 
-O fluxo entre os microserviços foi projetado para garantir segurança e isolamento:
+Fluxo simplificado entre os serviços:
 
-```
+```text
 Cliente
    │
    ▼
 ┌────────────────────┐
-│     API Gateway     │  → Valida JWT, roteia requisições
+│     API Gateway     │ → Valida JWT, aplica filtros e roteia
 └─────────┬──────────┘
           │
           ▼
 ┌────────────────────┐
-│   Login Service     │  → Autentica e gera tokens JWT
+│   Login Service     │ → Autentica e gera tokens JWT
 └─────────┬──────────┘
           │
           ▼
 ┌────────────────────┐
-│     PostgreSQL      │  → Persiste usuários e credenciais
+│     PostgreSQL      │ → Persistência de usuários
 └────────────────────┘
 ```
 
-Essa estrutura garante:
+Essa divisão garante:
 
-* centralização do controle de acesso;
-* desacoplamento entre autenticação e os demais módulos;
-* validação de segurança padronizada pelo Gateway.
+* centralização do controle de acesso no Gateway;
+* o Login Service focado apenas em autenticação e usuários (SRP – Single Responsibility Principle);
+* o banco de dados acessado apenas pela camada certa, evitando acoplamento indevido.
 
 ---
 
 ## **Organização da Estrutura de Pastas**
 
-A estrutura foi organizada seguindo o mesmo padrão do Módulo 1, garantindo previsibilidade e clareza.
+A organização segue o mesmo padrão do Módulo 1, para manter consistência dentro da suíte **Komfort Chain**.
 
 ### **1. Raiz do projeto (`modulo2/`)**
 
-Contém:
+Arquivos ligados ao módulo como um todo:
 
 * `docker-compose.yml`
-* `.github/workflows/`
-* `README.md`
+  Sobe: PostgreSQL, Graylog, Login Service e API Gateway.
 
-Arquivos destinados à infraestrutura do módulo como um todo.
+* `.github/workflows/`
+  Contém:
+
+  * `full-ci.yml`: pipeline completo (build, testes, SonarCloud, OWASP, Docker).
+  * `release.yml`: pipeline de release (versões taggeadas).
+
+* `README.md`
+  Documentação do módulo, explicando papéis, arquitetura e estrutura.
+
+Essa separação deixa claro o que pertence à **infraestrutura do módulo**, separado do código Java de cada microserviço.
 
 ---
 
 ### **2. Diretório `login-service/`**
 
-Contém a API responsável por autenticação, JWT e persistência:
+É o serviço responsável por **autenticação** e **emissão de tokens**.
 
-```
+Estrutura base (padrão Clean Architecture):
+
+```text
 login-service/
-├── application/
-│   ├── dto/
-│   └── service/
-├── domain/
-│   ├── model/
-│   └── repository/
-├── infrastructure/
-│   ├── config/
-│   ├── persistence/
-│   └── security/
-└── presentation/
-    ├── controller/
-    └── advice/
+├── src/main/java/com/cabos/login_service/
+│   ├── application/
+│   │   ├── dto/
+│   │   └── service/
+│   ├── domain/
+│   │   ├── model/
+│   │   └── repository/
+│   ├── infrastructure/
+│   │   ├── config/
+│   │   ├── persistence/
+│   │   └── security/
+│   └── presentation/
+│       ├── controller/
+│       └── advice/
+└── src/main/resources/
+    ├── application.yml
+    └── logback-spring.xml
 ```
 
-**Motivos da divisão:**
+A seguir, o papel de cada camada e como isso conversa com **Clean Architecture** e **SOLID**.
 
-* **application/**: regras de autenticação e transporte de dados.
-* **domain/**: entidade User e abstração do repositório.
-* **infrastructure/**: detalhes de banco, segurança e configurações.
-* **presentation/**: endpoints REST e tratadores globais de erro.
+---
+
+#### **2.1. `application/` – Casos de uso**
+
+Aqui ficam as **regras de aplicação**, que orquestram o fluxo entre domínio e infraestrutura.
+
+* `application/dto/`
+  Contém objetos de transporte, como por exemplo:
+
+  * `LoginRequestDTO`
+  * `RegisterUserDTO`
+  * `AuthResponseDTO`
+
+  Esses DTOs:
+
+  * evitam expor diretamente a entidade de domínio (`User`);
+  * definem exatamente o que entra e o que sai nos endpoints;
+  * ajudam a aplicar **SRP** (cada classe com uma responsabilidade clara).
+
+* `application/service/`
+  Aqui entram classes como:
+
+  * `AuthenticationService`
+    Implementa o caso de uso de login, chamando repositório, comparando senhas, gerando token, etc.
+
+  * `UserRegistrationService` (ou similar)
+    Lida com cadastro de usuários.
+
+  Como isso se encaixa em **Clean Architecture**?
+
+  * Essas classes representam os **use cases**.
+  * Elas conhecem o domínio e dependem de **interfaces**, não de detalhes concretos (seguindo **DIP – Dependency Inversion Principle**).
+  * Não têm conhecimento de HTTP, controllers ou detalhes do banco.
+
+---
+
+#### **2.2. `domain/` – Regras centrais do sistema**
+
+* `domain/model/`
+  Principalmente:
+
+  * `User`
+    Representa o usuário do sistema, com atributos como `id`, `username`, `password`, `role`, `enabled`.
+
+  Ela é:
+
+  * o **modelo de domínio**, que expressa o que o sistema manipula;
+  * independente de frameworks (Spring, JPA, etc., quando possível);
+  * usada por camadas superiores sem expor detalhes técnicos.
+
+* `domain/repository/`
+  Interface(s) que descrevem acesso a dados, por exemplo:
+
+  * `UserRepository` (interface de contrato).
+
+  Em termos de **Clean Architecture**:
+
+  * o domínio descreve **o que precisa ser feito**, não **como**;
+  * a implementação concreta do repositório fica na infraestrutura, respeitando o **DIP**.
+
+---
+
+#### **2.3. `infrastructure/` – Detalhes técnicos**
+
+Tudo que é **implementação concreta** fica aqui.
+
+* `infrastructure/config/`
+  Arquivos de configuração, por exemplo:
+
+  * configuração de beans,
+  * configurações de segurança,
+  * integração com outros serviços.
+
+* `infrastructure/persistence/`
+  Implementações de repositório, geralmente usando Spring Data JPA.
+
+  Exemplo típico:
+
+  * `UserRepositoryImpl` ou diretamente um `UserJpaRepository` que estende `JpaRepository<User, Long>`.
+
+  Aqui entram detalhes como:
+
+  * anotações `@Repository`,
+  * queries específicas,
+  * mapeamento JPA.
+
+* `infrastructure/security/`
+  Comportamentos ligados a autenticação/autorização, como:
+
+  * `SecurityConfig`
+    Configura o Spring Security (rotas públicas, rotas protegidas, filtros, etc.).
+
+  * `JwtAuthenticationFilter`
+    Lê o token JWT no header, valida e injeta o usuário autenticado no contexto de segurança.
+
+  * `JwtUtil` ou `TokenService`
+    Gera e valida tokens JWT (em alguns projetos, isso fica em `application`, em outros em `infrastructure/security`; aqui você segue o padrão que escolheu).
+
+Isso tudo é **infraestrutura pura**: são os detalhes que “plugam” seus casos de uso na realidade (banco, segurança, etc.).
+
+---
+
+#### **2.4. `presentation/` – Interface HTTP**
+
+Aqui entra tudo que conversa com o “lado de fora” via HTTP.
+
+```text
+presentation/
+├── controller/
+└── advice/
+```
+
+##### `controller/`
+
+* Controllers REST, como:
+
+  * `AuthController`
+    Expõe endpoints `/login` e `/login/register`, recebendo DTOs, chamando serviços da camada `application` e devolvendo respostas HTTP.
+
+Pontos importantes:
+
+* O controller **não** conhece detalhes de banco.
+* Ele chama serviços da `application`, convertendo HTTP → DTO → Serviço → Resposta.
+
+Isso ajuda a aplicar **SRP** e **separação de preocupações**: cada classe cuida apenas do que precisa.
+
+##### `advice/` – O que é isso?
+
+A pasta **`advice`** centraliza tratadores globais de exceção usando `@ControllerAdvice`.
+
+Aqui normalmente você tem uma classe como:
+
+* `GlobalExceptionHandler`
+
+O que ela faz:
+
+* Intercepta exceções lançadas pelos controllers/serviços.
+* Converte essas exceções em respostas HTTP padronizadas (status code + corpo de erro).
+* Evita espalhar `try/catch` por toda a aplicação.
+
+Por que isso faz sentido em **Clean Architecture**?
+
+* Tratamento de erro de interface HTTP é uma **preocupação da camada de apresentação**, não do domínio.
+* Com o `ControllerAdvice`, você agrupa esse comportamento em um ponto único, reduzindo acoplamento e repetição.
+
+Por que isso faz sentido em **SOLID**?
+
+* **SRP**: o controller foca em receber requisições e chamar serviços; o `GlobalExceptionHandler` foca em traduzir erros em respostas HTTP.
+* **OCP**: você pode adicionar novos tipos de erro ou mensagens customizadas estendendo o handler, sem mexer em todos os controllers.
+
+Resumindo:
+
+> A pasta `advice` é onde você concentra as classes responsáveis por tratar erros de forma global na camada de apresentação.
 
 ---
 
 ### **3. Diretório `api-gateway/`**
 
-Responsável por roteamento e controle de entrada:
+Este serviço é responsável por:
 
-```
+* ser o ponto único de entrada;
+* validar tokens JWT;
+* rotear as chamadas para os demais módulos.
+
+Estrutura simplificada:
+
+```text
 api-gateway/
 ├── src/main/java/com/cabos/api_gateway/
-└── resources/
+│   ├── ApiGatewayApplication.java
+│   └── (configs e filtros, se aplicável)
+└── src/main/resources/
     ├── application.yml
     └── logback-spring.xml
 ```
 
-O gateway segue o padrão minimalista utilizado em microserviços: leve, simples e focado apenas em roteamento e segurança.
+Ele tende a ser mais enxuto, justamente porque:
+
+* não tem lógica de negócio;
+* foca em **roteamento** e **segurança**;
+* aplica o princípio de manter cada serviço fazendo apenas o que precisa.
 
 ---
 
 ## **Execução Local**
 
-### **1. Clonar o repositório**
+### 1. Clonar o repositório
 
 ```bash
 git clone https://github.com/Komfort-chain/modulo2.git
 cd modulo2
 ```
 
-### **2. Gerar os artefatos**
+### 2. Gerar os artefatos
 
 ```bash
 cd login-service && ./mvnw clean package -DskipTests
@@ -148,13 +323,15 @@ cd ../api-gateway && ./mvnw clean package -DskipTests
 cd ..
 ```
 
-### **3. Subir toda a stack**
+### 3. Subir a stack
 
 ```bash
 docker compose up --build -d
 ```
 
-### **Serviços Esperados**
+---
+
+## **Serviços Esperados**
 
 | Serviço       | Porta | Descrição                        |
 | ------------- | ----- | -------------------------------- |
@@ -167,13 +344,13 @@ docker compose up --build -d
 
 ## **Endpoints Principais**
 
-### **1. Registro de usuário**
+### Registro de usuário
 
-```
+```http
 POST /login/register
 ```
 
-Body:
+Exemplo de corpo:
 
 ```json
 {
@@ -183,11 +360,9 @@ Body:
 }
 ```
 
----
+### Autenticação
 
-### **2. Autenticação**
-
-```
+```http
 POST /login
 ```
 
@@ -200,11 +375,11 @@ Body:
 }
 ```
 
-Retorno:
+Resposta:
 
 ```json
 {
-  "token": "jwt_aqui"
+  "token": "jwt_gerado_aqui"
 }
 ```
 
@@ -212,54 +387,52 @@ Retorno:
 
 ## **Testes Automatizados**
 
-Os testes foram organizados para refletir exatamente as camadas internas:
+A estrutura de testes acompanha a divisão por camadas:
 
-```
+```text
 login-service/src/test/java/com/cabos/login_service/
     application/service/
     infrastructure/security/
     presentation/controller/
 ```
 
-### **Objetivos dos testes**
+Eles cobrem:
 
-* validar regras de negócio da autenticação;
-* verificar geração e validação do JWT;
-* garantir o correto funcionamento das rotas REST;
-* manter a cobertura exigida pelo SonarCloud;
-* detectar inconsistências durante o desenvolvimento.
+* fluxo de autenticação;
+* registro de usuário;
+* validação de token;
+* comportamento HTTP dos endpoints;
+* integração com Spring Security.
 
-### **Testes implementados**
+Essa bateria de testes ajuda a:
 
-* **AuthControllerTest**: cobre login e registro.
-* **AuthenticationServiceTest**: valida fluxo interno de autenticação e registro.
-* **TokenServiceTest**: garante a validação de tokens.
-* **JwtUtilTest**: cobre geração e validação de token JWT.
-
-Essa bateria de testes garante estabilidade, previsibilidade e segurança ao módulo.
+* manter a qualidade exigida pelo SonarCloud;
+* evitar regressões;
+* garantir que o módulo se comporte como esperado.
 
 ---
 
 ## **Workflows CI/CD**
 
-### **1. full-ci.yml**
+### `full-ci.yml`
 
 Responsável por:
 
-* compilação e testes;
+* build e testes;
 * análise no SonarCloud;
-* verificação de vulnerabilidades (OWASP);
-* upload de relatórios;
-* build e push das imagens Docker.
+* execução do OWASP Dependency-Check (com fallback offline);
+* upload de relatórios (JaCoCo, Surefire);
+* build e push das imagens no Docker Hub.
 
-### **2. release.yml**
+### `release.yml`
 
-Executado quando uma tag SemVer é criada:
+Executado quando é criada uma tag `vX.Y.Z`:
 
-* build completo;
-* geração do changelog;
-* upload do `.jar`;
-* publicação de imagens Docker versionadas.
+* build dos serviços;
+* geração de changelog;
+* criação de release no GitHub;
+* upload dos artefatos `.jar`;
+* publicação de imagens versionadas.
 
 ---
 
@@ -270,21 +443,21 @@ Executado quando uma tag SemVer é criada:
 | Login Service | [https://hub.docker.com/repository/docker/magyodev/login-service](https://hub.docker.com/repository/docker/magyodev/login-service) |
 | API Gateway   | [https://hub.docker.com/repository/docker/magyodev/api-gateway](https://hub.docker.com/repository/docker/magyodev/api-gateway)     |
 
-Tags disponíveis:
+Tags:
 
 * `latest`
 * `${run_number}`
-* `vX.Y.Z` (releases)
+* `vX.Y.Z`
 
 ---
 
 ## **Logs e Monitoramento**
 
-Ambos os serviços utilizam logs estruturados via GELF, encaminhados ao Graylog.
-Essa abordagem facilita:
+Ambos os serviços enviam logs para o Graylog usando GELF.
+Isso facilita:
 
 * rastreamento de erros;
-* análise de fluxo entre microserviços;
+* análise de fluxo de autenticação;
 * auditoria de requisições.
 
 ---
