@@ -1,15 +1,19 @@
 package com.cabos.login_service.domain.model;
 
 import jakarta.persistence.*;
+import lombok.Data;
 
 @Entity
 @Table(name = "users")
-public record User(
-        @Id
-        @GeneratedValue(strategy = GenerationType.IDENTITY)
-        Long id,
-        String username,
-        String password,
-        String role,
-        boolean enabled
-) {}
+@Data
+public class User {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String username;
+    private String password;
+    private String role;
+    private boolean enabled;
+}
