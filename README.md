@@ -1,105 +1,146 @@
 # **Módulo 2 — Login Service & API Gateway (Komfort Chain)**
 
-O **Módulo 2** da suíte **Komfort Chain** fornece a camada de **autenticação, autorização e roteamento seguro** de requisições.
-Ele é composto por dois microserviços independentes:
+O **Módulo 2** da suíte **Komfort Chain** implementa a camada de autenticação, autorização e roteamento seguro.
+Ele é composto por dois microserviços independentes, integrados por meio de um fluxo simples e claro:
 
-* **Login Service** — responsável pela autenticação de usuários, geração de tokens **JWT (Bearer Token)** e acesso ao banco **PostgreSQL**.
-* **API Gateway** — atua como ponto central de entrada, executando **roteamento inteligente**, **validação de tokens**, filtragem e composição de chamadas.
+* **Login Service**: responsável pela autenticação, geração e validação de tokens JWT e persistência de usuários.
+* **API Gateway**: ponto único de entrada que executa roteamento, controle de acesso e validação de token.
 
-O módulo adota **Clean Architecture**, **SOLID**, **RESTful APIs**, observabilidade via **Graylog**, pipelines de segurança automatizados e análise contínua via **SonarCloud** e **CodeQL**.
+Os serviços seguem princípios de **Clean Architecture**, **SOLID** e **RESTful APIs**, mantendo observabilidade com **Graylog** e garantindo qualidade contínua com **SonarCloud**, **OWASP Dependency-Check** e automação completa via pipelines GitHub Actions.
 
 ---
 
 ## **Status do Projeto**
 
 [![Full CI/CD](https://github.com/Komfort-chain/modulo2/actions/workflows/full-ci.yml/badge.svg)](https://github.com/Komfort-chain/modulo2/actions/workflows/full-ci.yml)
-[![CodeQL](https://github.com/Komfort-chain/modulo2/actions/workflows/codeql.yml/badge.svg)](https://github.com/Komfort-chain/modulo2/actions/workflows/codeql.yml)
 [![Release](https://github.com/Komfort-chain/modulo2/actions/workflows/release.yml/badge.svg)](https://github.com/Komfort-chain/modulo2/actions/workflows/release.yml)
+[![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=Komfort-chain_modulo2\&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Komfort-chain_modulo2)
+[![Maintainability](https://sonarcloud.io/api/project_badges/measure?project=Komfort-chain_modulo2\&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=Komfort-chain_modulo2)
 [![Docker Hub](https://img.shields.io/badge/DockerHub-magyodev/login--service-blue)](https://hub.docker.com/repository/docker/magyodev/login-service)
 [![Docker Hub](https://img.shields.io/badge/DockerHub-magyodev/api--gateway-blue)](https://hub.docker.com/repository/docker/magyodev/api-gateway)
-[![SonarCloud](https://sonarcloud.io/api/project_badges/measure?project=Komfort-chain_modulo2\&metric=alert_status)](https://sonarcloud.io/summary/overall?id=Komfort-chain_modulo2)
-![Java 21](https://img.shields.io/badge/Java-21-red)
-![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.5.7-brightgreen)
 
 ---
 
 ## **Tecnologias Utilizadas**
 
-| Categoria            | Tecnologias / Ferramentas                          |
-| -------------------- | -------------------------------------------------- |
-| **Linguagem**        | Java 21                                            |
-| **Frameworks**       | Spring Boot 3.5.7 • Spring Cloud • Spring Security |
-| **Banco de Dados**   | PostgreSQL 16                                      |
-| **Autenticação**     | JWT (Bearer Token)                                 |
-| **Logs**             | Logback GELF → Graylog 5.1                         |
-| **Testes**           | JUnit 5 • Spring Boot Test • JaCoCo                |
-| **Análise Estática** | SonarCloud • CodeQL • OWASP Dependency-Check       |
-| **Build**            | Maven Wrapper                                      |
-| **Containerização**  | Docker • Docker Compose                            |
-| **Arquitetura**      | Clean Architecture • SOLID • RESTful APIs          |
+| Categoria        | Ferramenta / Tecnologia                   |
+| ---------------- | ----------------------------------------- |
+| Linguagem        | Java 21                                   |
+| Framework        | Spring Boot 3.5.7                         |
+| Segurança        | Spring Security • JWT                     |
+| Banco de Dados   | PostgreSQL 16                             |
+| Logs             | Logback GELF → Graylog 5.2                |
+| Testes           | JUnit 5 • Spring Boot Test • JaCoCo       |
+| Build            | Maven Wrapper (mvnw)                      |
+| Análise Estática | SonarCloud • OWASP Dependency-Check       |
+| Containerização  | Docker e Docker Compose                   |
+| Arquitetura      | Clean Architecture • SOLID • RESTful APIs |
 
 ---
 
-## **Arquitetura**
+## **Arquitetura Geral**
 
-O Módulo 2 é composto por dois microserviços independentes executando de forma colaborativa:
-
-### Fluxo Arquitetural
+O fluxo entre os microserviços foi projetado para garantir segurança e isolamento:
 
 ```
 Cliente
    │
    ▼
-┌──────────────┐
-│  API Gateway │  ← Valida JWT, roteia, aplica filtros
-└──────┬───────┘
-       │
-       ▼
-┌──────────────┐
-│ Login Service│  ← Autentica usuário e gera JWT
-└──────┬───────┘
-       │
-       ▼
-┌──────────────┐
-│ PostgreSQL   │  ← Armazena usuários e credenciais
-└──────────────┘
+┌────────────────────┐
+│     API Gateway     │  → Valida JWT, roteia requisições
+└─────────┬──────────┘
+          │
+          ▼
+┌────────────────────┐
+│   Login Service     │  → Autentica e gera tokens JWT
+└─────────┬──────────┘
+          │
+          ▼
+┌────────────────────┐
+│     PostgreSQL      │  → Persiste usuários e credenciais
+└────────────────────┘
 ```
+
+Essa estrutura garante:
+
+* centralização do controle de acesso;
+* desacoplamento entre autenticação e os demais módulos;
+* validação de segurança padronizada pelo Gateway.
 
 ---
 
-## **Estrutura do Projeto**
+## **Organização da Estrutura de Pastas**
+
+A estrutura foi organizada seguindo o mesmo padrão do Módulo 1, garantindo previsibilidade e clareza.
+
+### **1. Raiz do projeto (`modulo2/`)**
+
+Contém:
+
+* `docker-compose.yml`
+* `.github/workflows/`
+* `README.md`
+
+Arquivos destinados à infraestrutura do módulo como um todo.
+
+---
+
+### **2. Diretório `login-service/`**
+
+Contém a API responsável por autenticação, JWT e persistência:
 
 ```
-modulo2/
-├── docker-compose.yml
-├── .github/workflows/
-│   ├── full-ci.yml          # Build • Testes • SonarCloud • OWASP • Docker Hub
-│   ├── codeql.yml           # Análise semântica de segurança
-│   └── release.yml          # Release + Docker Hub (tags semver)
-│
-├── api-gateway/
-│   ├── Dockerfile
-│   ├── pom.xml
-│   └── src/main/java/com/cabos/api_gateway/...
-│
-└── login-service/
-    ├── Dockerfile
-    ├── pom.xml
-    └── src/main/java/com/cabos/login_service/...
+login-service/
+├── application/
+│   ├── dto/
+│   └── service/
+├── domain/
+│   ├── model/
+│   └── repository/
+├── infrastructure/
+│   ├── config/
+│   ├── persistence/
+│   └── security/
+└── presentation/
+    ├── controller/
+    └── advice/
 ```
+
+**Motivos da divisão:**
+
+* **application/**: regras de autenticação e transporte de dados.
+* **domain/**: entidade User e abstração do repositório.
+* **infrastructure/**: detalhes de banco, segurança e configurações.
+* **presentation/**: endpoints REST e tratadores globais de erro.
+
+---
+
+### **3. Diretório `api-gateway/`**
+
+Responsável por roteamento e controle de entrada:
+
+```
+api-gateway/
+├── src/main/java/com/cabos/api_gateway/
+└── resources/
+    ├── application.yml
+    └── logback-spring.xml
+```
+
+O gateway segue o padrão minimalista utilizado em microserviços: leve, simples e focado apenas em roteamento e segurança.
 
 ---
 
 ## **Execução Local**
 
-### 1. Clonar o repositório
+### **1. Clonar o repositório**
 
 ```bash
 git clone https://github.com/Komfort-chain/modulo2.git
 cd modulo2
 ```
 
-### 2. Gerar os artefatos
+### **2. Gerar os artefatos**
 
 ```bash
 cd login-service && ./mvnw clean package -DskipTests
@@ -107,37 +148,32 @@ cd ../api-gateway && ./mvnw clean package -DskipTests
 cd ..
 ```
 
-### 3. Subir toda a stack
+### **3. Subir toda a stack**
 
 ```bash
 docker compose up --build -d
 ```
 
-### 4. Verificar serviços
-
-```bash
-docker ps
-```
+### **Serviços Esperados**
 
 | Serviço       | Porta | Descrição                        |
 | ------------- | ----- | -------------------------------- |
-| API Gateway   | 8080  | Roteamento e validação JWT       |
-| Login Service | 8081  | Autenticação e geração de tokens |
-| PostgreSQL    | 5432  | Banco de dados                   |
-| Graylog       | 9009  | Logs centralizados               |
+| API Gateway   | 8080  | Entrada única e validação do JWT |
+| Login Service | 8081  | Autenticação e emissão de tokens |
+| PostgreSQL    | 5432  | Banco de dados de usuários       |
+| Graylog       | 9009  | Centralização de logs            |
 
 ---
 
 ## **Endpoints Principais**
 
-### **Registrar usuário**
+### **1. Registro de usuário**
 
-```http
-POST http://localhost:8080/login/register
-Content-Type: application/json
+```
+POST /login/register
 ```
 
-**Body:**
+Body:
 
 ```json
 {
@@ -149,14 +185,13 @@ Content-Type: application/json
 
 ---
 
-### **Autenticação**
+### **2. Autenticação**
 
-```http
-POST http://localhost:8080/login
-Content-Type: application/json
+```
+POST /login
 ```
 
-**Body:**
+Body:
 
 ```json
 {
@@ -165,102 +200,100 @@ Content-Type: application/json
 }
 ```
 
-**Resposta (JWT):**
+Retorno:
 
 ```json
 {
-  "token": "eyJhbGciOiJIUzI1NiIs..."
+  "token": "jwt_aqui"
 }
 ```
 
 ---
 
+## **Testes Automatizados**
+
+Os testes foram organizados para refletir exatamente as camadas internas:
+
+```
+login-service/src/test/java/com/cabos/login_service/
+    application/service/
+    infrastructure/security/
+    presentation/controller/
+```
+
+### **Objetivos dos testes**
+
+* validar regras de negócio da autenticação;
+* verificar geração e validação do JWT;
+* garantir o correto funcionamento das rotas REST;
+* manter a cobertura exigida pelo SonarCloud;
+* detectar inconsistências durante o desenvolvimento.
+
+### **Testes implementados**
+
+* **AuthControllerTest**: cobre login e registro.
+* **AuthenticationServiceTest**: valida fluxo interno de autenticação e registro.
+* **TokenServiceTest**: garante a validação de tokens.
+* **JwtUtilTest**: cobre geração e validação de token JWT.
+
+Essa bateria de testes garante estabilidade, previsibilidade e segurança ao módulo.
+
+---
+
 ## **Workflows CI/CD**
 
-O projeto possui **três pipelines oficiais**:
+### **1. full-ci.yml**
 
----
+Responsável por:
 
-### **1. full-ci.yml — Pipeline Completo**
+* compilação e testes;
+* análise no SonarCloud;
+* verificação de vulnerabilidades (OWASP);
+* upload de relatórios;
+* build e push das imagens Docker.
 
-Executa automaticamente:
+### **2. release.yml**
 
-* Build & Test (Login + Gateway)
-* SonarCloud (cobertura, duplicações, bugs)
-* OWASP Dependency-Check
-* Upload de relatórios (JaCoCo, Surefire, OWASP)
-* Build & Push das imagens Docker:
+Executado quando uma tag SemVer é criada:
 
-```
-magyodev/login-service
-magyodev/api-gateway
-```
-
----
-
-### **2. codeql.yml — Análise de Segurança Avançada**
-
-Pipeline DevSecOps utilizando **CodeQL**:
-
-* Análise de vulnerabilidades semânticas
-* Dataflow analysis
-* Segurança de API e validação de token
-
-Ideal para ambientes corporativos.
-
----
-
-### **3. release.yml — Automação de Release**
-
-Executado ao criar uma tag ou release:
-
-* Build completo
-* Geração de imagem Docker com tag SemVer (`v1.0.0`)
-* Publicação automática no Docker Hub
+* build completo;
+* geração do changelog;
+* upload do `.jar`;
+* publicação de imagens Docker versionadas.
 
 ---
 
 ## **Imagens Docker Oficiais**
 
-| Serviço       | Docker Hub                                                                                                                         |
+| Serviço       | Link                                                                                                                               |
 | ------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| API Gateway   | [https://hub.docker.com/repository/docker/magyodev/api-gateway](https://hub.docker.com/repository/docker/magyodev/api-gateway)     |
 | Login Service | [https://hub.docker.com/repository/docker/magyodev/login-service](https://hub.docker.com/repository/docker/magyodev/login-service) |
+| API Gateway   | [https://hub.docker.com/repository/docker/magyodev/api-gateway](https://hub.docker.com/repository/docker/magyodev/api-gateway)     |
 
-Tags:
+Tags disponíveis:
 
 * `latest`
 * `${run_number}`
-* `vX.Y.Z` (release semver)
+* `vX.Y.Z` (releases)
 
 ---
 
-## **Observabilidade**
+## **Logs e Monitoramento**
 
-Logs centralizados via **Graylog**, enviados com Logback GELF.
+Ambos os serviços utilizam logs estruturados via GELF, encaminhados ao Graylog.
+Essa abordagem facilita:
 
-Visualizar logs:
-
-```bash
-docker logs -f login-service
-docker logs -f api-gateway
-```
-
-Cada entrada inclui:
-
-* Timestamp
-* Logger
-* Server
-* Nível de severidade
-* Stacktrace (se houver erro)
+* rastreamento de erros;
+* análise de fluxo entre microserviços;
+* auditoria de requisições.
 
 ---
 
 ## **Contribuição**
 
-1. Faça um fork do projeto
+1. Faça um fork do repositório
 2. Crie uma branch: `feature/nova-funcionalidade`
-3. Utilize **commits semânticos profissionais**
+3. Utilize commits semânticos
 4. Abra um Pull Request para `main`
 
 ---
@@ -268,7 +301,6 @@ Cada entrada inclui:
 ## **Autor**
 
 **Alan de Lima Silva (MagyoDev)**
-
 * GitHub: [https://github.com/MagyoDev](https://github.com/MagyoDev)
 * Docker Hub: [https://hub.docker.com/u/magyodev](https://hub.docker.com/u/magyodev)
 * E-mail: [magyodev@gmail.com](mailto:magyodev@gmail.com)

@@ -24,13 +24,11 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      - name: Build artifact with Maven
-        working-directory: login-service     # <-- aqui muda pro diretório do módulo 2
+      - name: Build artifact
+        working-directory: login-service
         run: |
           chmod +x mvnw
           ./mvnw clean package -DskipTests=true
-        env:
-          MAVEN_OPTS: -Xmx2G
 
       - name: Generate changelog
         id: changelog
@@ -48,9 +46,7 @@ jobs:
           name: "Release ${{ github.ref_name }}"
           tag_name: ${{ github.ref_name }}
           body_path: release_notes.md
-          draft: false
-          prerelease: false
           files: |
-            login-service/target/login-service-*.jar  # <-- caminho do artefato do módulo 2
+            login-service/target/login-service-*.jar
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

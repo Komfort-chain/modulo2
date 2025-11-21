@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class TokenService {
+
     private final JwtUtil jwtUtil;
 
     public TokenService(JwtUtil jwtUtil) {

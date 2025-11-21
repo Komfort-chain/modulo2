@@ -1,11 +1,11 @@
 package com.cabos.login_service.application.dto;
 
 public class RegisterRequest {
+
     private String username;
     private String password;
     private String role;
 
-    // getters e setters
     public String getUsername() {
         return username;
     }
