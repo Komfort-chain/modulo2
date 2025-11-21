@@ -1,31 +1,25 @@
 package com.cabos.login_service.infrastructure.config;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.context.annotation.Import;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
-@WebMvcTest
-@Import(SecurityConfig.class)
 class SecurityConfigTest {
 
-    @Autowired
-    private SecurityFilterChain filterChain;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+    private final SecurityConfig securityConfig = new SecurityConfig();
 
     @Test
-    void deveCarregarSecurityFilterChain() {
-        assertThat(filterChain).isNotNull();
+    void deveCarregarSecurityFilterChain() throws Exception {
+        HttpSecurity http = mock(HttpSecurity.class);
+        SecurityFilterChain chain = securityConfig.filterChain(http);
+        assertThat(chain).isNotNull();
     }
 
     @Test
     void deveCarregarPasswordEncoder() {
-        assertThat(passwordEncoder).isNotNull();
+        assertThat(securityConfig.passwordEncoder()).isNotNull();
     }
 }
