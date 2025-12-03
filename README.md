@@ -1,3 +1,4 @@
+````markdown
 # Módulo 2 – API de Autenticação com Gateway (Komfort Chain)
 
 Este repositório implementa o **Módulo 2** do projeto **Komfort Chain**: uma solução de autenticação baseada em **Spring Boot**, **MongoDB**, um esquema de token **“JWT-like”** e um **API Gateway** utilizando Spring Cloud Gateway.
@@ -10,7 +11,7 @@ A arquitetura segue **Clean Architecture** e princípios **SOLID**, separando cl
 
 O objetivo deste módulo é:
 
-- Centralizar o **login** e **registro** de usuários.
+- Centralizar o **login** e o **registro** de usuários.
 - Expor uma **borda única** via **Gateway**, isolando clientes dos detalhes internos.
 - Garantir baixo acoplamento e alta coesão entre domínio, infraestrutura e borda.
 
@@ -73,63 +74,63 @@ O objetivo deste módulo é:
 
 ### 3.1 Registro de usuário
 
-- **URL via Gateway**  
-  `POST http://localhost:8080/api/v1/register`
+**URL via Gateway**  
+`POST http://localhost:8080/api/v1/register`
 
-- **Body (JSON)**
+**Body (JSON)**
 
-  ```json
-  {
-    "name": "Usuário de Teste",
-    "email": "user@example.com",
-    "password": "minha-senha"
-  }
+```json
+{
+  "name": "Usuário de Teste",
+  "email": "user@example.com",
+  "password": "minha-senha"
+}
 ````
 
-* **Resposta (201 Created)**
+**Resposta (201 Created)**
 
-  ```json
-  {
-    "id": "generated-uuid",
-    "name": "Usuário de Teste",
-    "email": "user@example.com"
-  }
-  ```
+```json
+{
+  "id": "generated-uuid",
+  "name": "Usuário de Teste",
+  "email": "user@example.com"
+}
+```
 
-* **Possíveis erros**
+**Possíveis erros**
 
-  * `409 Conflict` – `UserAlreadyExistsException` (usuário já cadastrado com o mesmo e-mail).
+* `409 Conflict` – `UserAlreadyExistsException` (usuário já cadastrado com o mesmo e-mail).
 
 ---
 
 ### 3.2 Login
 
-* **URL via Gateway**
-  `POST http://localhost:8080/api/v1/login`
+**URL via Gateway**
+`POST http://localhost:8080/api/v1/login`
 
-* **Body (JSON)**
+**Body (JSON)**
 
-  ```json
-  {
-    "email": "user@example.com",
-    "password": "minha-senha"
-  }
-  ```
+```json
+{
+  "email": "user@example.com",
+  "password": "minha-senha"
+}
+```
 
-* **Resposta (200 OK)**
+**Resposta (200 OK)**
 
-  ```json
-  {
-    "accessToken": "base64-token",
-    "tokenType": "Bearer",
-    "expiresAt": 1735689600
-  }
-  ```
+```json
+{
+  "accessToken": "base64-token",
+  "tokenType": "Bearer",
+  "expiresAt": 1735689600
+}
+```
 
-* **Possíveis erros**
+**Possíveis erros**
 
-  * `401 Unauthorized` – `InvalidCredentialsException`
-    E-mail ou senha inválidos, ou usuário inativo.
+* `401 Unauthorized` – `InvalidCredentialsException`
+  E-mail ou senha inválidos, ou usuário inativo.
 
 ---
 
