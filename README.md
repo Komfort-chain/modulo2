@@ -1,4 +1,3 @@
-````markdown
 # Módulo 2 – API de Autenticação com Gateway (Komfort Chain)
 
 Este repositório implementa o **Módulo 2** do projeto **Komfort Chain**: uma solução de autenticação baseada em **Spring Boot**, **MongoDB**, um esquema de token **“JWT-like”** e um **API Gateway** utilizando Spring Cloud Gateway.
