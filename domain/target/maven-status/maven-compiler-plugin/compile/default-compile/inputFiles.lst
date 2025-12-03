@@ -1,0 +1,11 @@
+E:\Komfort-chain\modulo2\domain\src\main\java\com\cabos\komfortchain\login\domain\port\PasswordEncoderPort.java
+E:\Komfort-chain\modulo2\domain\src\main\java\com\cabos\komfortchain\login\domain\usecase\RegisterUserUseCase.java
+E:\Komfort-chain\modulo2\domain\src\main\java\com\cabos\komfortchain\login\domain\model\User.java
+E:\Komfort-chain\modulo2\domain\src\main\java\com\cabos\komfortchain\login\domain\usecase\AuthenticateUserUseCase.java
+E:\Komfort-chain\modulo2\domain\src\main\java\com\cabos\komfortchain\login\domain\model\Role.java
+E:\Komfort-chain\modulo2\domain\src\main\java\com\cabos\komfortchain\login\domain\port\UserRepositoryPort.java
+E:\Komfort-chain\modulo2\domain\src\main\java\com\cabos\komfortchain\login\domain\port\TokenProviderPort.java
+E:\Komfort-chain\modulo2\domain\src\main\java\com\cabos\komfortchain\login\domain\exception\InvalidCredentialsException.java
+E:\Komfort-chain\modulo2\domain\src\main\java\com\cabos\komfortchain\login\domain\exception\InvalidTokenException.java
+E:\Komfort-chain\modulo2\domain\src\main\java\com\cabos\komfortchain\login\domain\exception\UserAlreadyExistsException.java
+E:\Komfort-chain\modulo2\domain\src\main\java\com\cabos\komfortchain\login\domain\usecase\ValidateTokenUseCase.java

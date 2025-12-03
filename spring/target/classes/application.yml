@@ -1,0 +1,13 @@
+spring:
+  application:
+    name: login-service
+  data:
+    mongodb:
+      uri: mongodb://mongo:27017/login-db
+
+server:
+  port: 8081
+
+jwt:
+  secret: change-me-in-prod
+  expiration-seconds: 3600

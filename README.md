@@ -1,479 +1,366 @@
-# **Módulo 2 — Login Service & API Gateway (Komfort Chain)**
+# Módulo 2 – API de Autenticação com Gateway (Komfort Chain)
 
-O **Módulo 2** da suíte **Komfort Chain** implementa a camada de **autenticação, autorização e roteamento seguro** da plataforma.
-Ele é formado por dois microserviços:
+Este repositório implementa o **Módulo 2** do projeto Komfort Chain: uma solução de autenticação baseada em **Spring Boot**, **MongoDB**, **tokens “JWT-like”** e um **API Gateway** utilizando Spring Cloud Gateway.
 
-* **Login Service**: cuida de cadastro, autenticação de usuários e geração/validação de tokens JWT.
-* **API Gateway**: atua como ponto único de entrada, validando tokens e roteando chamadas para os demais serviços.
+A arquitetura segue **Clean Architecture** e princípios **SOLID**, separando claramente:
 
-A estrutura foi organizada para manter **separação clara de responsabilidades**, alinhada a **Clean Architecture** e **SOLID**, com automação de qualidade via **SonarCloud**, **OWASP Dependency-Check** e pipelines GitHub Actions.
-
----
-
-## **Status do Projeto**
-
-[![Full CI/CD](https://github.com/Komfort-chain/modulo2/actions/workflows/full-ci.yml/badge.svg)](https://github.com/Komfort-chain/modulo2/actions/workflows/full-ci.yml)
-[![Release](https://github.com/Komfort-chain/modulo2/actions/workflows/release.yml/badge.svg)](https://github.com/Komfort-chain/modulo2/actions/workflows/release.yml)
-[![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=Komfort-chain_modulo2\&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Komfort-chain_modulo2)
-[![Maintainability](https://sonarcloud.io/api/project_badges/measure?project=Komfort-chain_modulo2\&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=Komfort-chain_modulo2)
-[![Docker Hub](https://img.shields.io/badge/DockerHub-magyodev%2Flogin--service-blue)](https://hub.docker.com/repository/docker/magyodev/login-service)
-[![Docker Hub](https://img.shields.io/badge/DockerHub-magyodev%2Fapi--gateway-blue)](https://hub.docker.com/repository/docker/magyodev/api-gateway)
+- **Regras de negócio (domínio)**
+- **Camada de aplicação / infraestrutura (Spring)**
+- **Borda de entrada do sistema (Gateway)**
 
 ---
 
-## **Tecnologias Utilizadas**
+## 1. Visão Geral da Arquitetura
 
-| Categoria        | Ferramenta / Tecnologia                   |
-| ---------------- | ----------------------------------------- |
-| Linguagem        | Java 21                                   |
-| Framework        | Spring Boot 3.5.7                         |
-| Segurança        | Spring Security • JWT                     |
-| Banco de Dados   | PostgreSQL 16                             |
-| Logs             | Logback GELF → Graylog 5.2                |
-| Testes           | JUnit 5 • Spring Boot Test • JaCoCo       |
-| Build            | Maven Wrapper (mvnw)                      |
-| Análise Estática | SonarCloud • OWASP Dependency-Check       |
-| Containerização  | Docker e Docker Compose                   |
-| Arquitetura      | Clean Architecture • SOLID • RESTful APIs |
+### 1.1 Componentes principais
+
+- `domain/`  
+  Contém o **núcleo de domínio**:
+  - Entidades (`User`, `Role`)
+  - Exceções de domínio
+  - Ports (interfaces)
+  - Casos de uso (use cases)
+
+- `spring/`  
+  Contém a **aplicação de autenticação**:
+  - Controllers REST (`/api/v1/register`, `/api/v1/login`)
+  - Configurações de segurança e beans
+  - Implementações de ports (adapters)
+  - Persistência com MongoDB (`UserEntity`, `SpringDataUserRepository`)
+  - Implementação de um token “JWT-like” (`JwtTokenProvider`)
+
+- `gateway/`  
+  Contém o **API Gateway**:
+  - Rotas para encaminhar requisições de `/api/v1/*` para o `login-service`
+
+- `docker-compose.yml`  
+  Orquestra:
+  - `mongo` (banco de dados)
+  - `login-service` (módulo `spring`)
+  - `gateway` (módulo `gateway`)
 
 ---
 
-## **Arquitetura Geral**
+## 2. Limites de Contexto e Fluxo de Requisição
 
-Fluxo simplificado entre os serviços:
+### 2.1 Fluxo de autenticação
 
-```text
-Cliente
-   │
-   ▼
-┌────────────────────┐
-│     API Gateway     │ → Valida JWT, aplica filtros e roteia
-└─────────┬──────────┘
-          │
-          ▼
-┌────────────────────┐
-│   Login Service     │ → Autentica e gera tokens JWT
-└─────────┬──────────┘
-          │
-          ▼
-┌────────────────────┐
-│     PostgreSQL      │ → Persistência de usuários
-└────────────────────┘
+1. O cliente chama o **Gateway** em:
+   - `POST http://localhost:8080/api/v1/register`
+   - `POST http://localhost:8080/api/v1/login`
+
+2. O Gateway encaminha a requisição para o **login-service** (`spring`):
+   - `http://login-service:8081/api/v1/...`
+
+3. O `login-service`:
+   - Usa os **casos de uso do domínio** para registrar ou autenticar o usuário.
+   - Persiste/consulta dados no **MongoDB**.
+   - Gera um **token** usando `JwtTokenProvider` (implementação didática de um token “JWT-like” baseado em Base64).
+
+4. O cliente recebe:
+   - No registro: dados básicos do usuário.
+   - No login: `accessToken`, tipo do token e timestamp de expiração.
+
+---
+
+## 3. Endpoints Disponíveis
+
+### 3.1 Registro de usuário
+
+- **URL via Gateway**:  
+  `POST http://localhost:8080/api/v1/register`
+
+- **Body (JSON)**:
+  ```json
+  {
+    "name": "Usuário de Teste",
+    "email": "user@example.com",
+    "password": "minha-senha"
+  }
+````
+
+* **Resposta (201 Created)**:
+
+  ```json
+  {
+    "id": "generated-uuid",
+    "name": "Usuário de Teste",
+    "email": "user@example.com"
+  }
+  ```
+
+* **Possíveis erros**:
+
+  * `409 Conflict` – `UserAlreadyExistsException`
+    Usuário já cadastrado com o mesmo e-mail.
+
+---
+
+### 3.2 Login
+
+* **URL via Gateway**:
+  `POST http://localhost:8080/api/v1/login`
+
+* **Body (JSON)**:
+
+  ```json
+  {
+    "email": "user@example.com",
+    "password": "minha-senha"
+  }
+  ```
+
+* **Resposta (200 OK)**:
+
+  ```json
+  {
+    "accessToken": "base64-token",
+    "tokenType": "Bearer",
+    "expiresAt": 1735689600
+  }
+  ```
+
+* **Possíveis erros**:
+
+  * `401 Unauthorized` – `InvalidCredentialsException`
+    E-mail ou senha inválidos, ou usuário inativo.
+
+---
+
+## 4. Como Executar o Projeto
+
+### 4.1 Pré-requisitos
+
+* Docker e Docker Compose instalados.
+* Opcional (execução local): JDK 21 + Maven Wrapper (`mvnw`).
+
+### 4.2 Subir tudo com Docker Compose
+
+Na raiz do projeto (onde está o `docker-compose.yml`):
+
+```bash
+docker compose up -d --build
 ```
 
-Essa divisão garante:
+Serviços:
 
-* centralização do controle de acesso no Gateway;
-* o Login Service focado apenas em autenticação e usuários (SRP – Single Responsibility Principle);
-* o banco de dados acessado apenas pela camada certa, evitando acoplamento indevido.
+* MongoDB: `mongodb://localhost:27017/login-db`
+* Login Service: `http://localhost:8081`
+* Gateway: `http://localhost:8080`
 
----
+### 4.3 Testar rapidamente
 
-## **Organização da Estrutura de Pastas**
+#### Registro
 
-A organização segue o mesmo padrão do Módulo 1, para manter consistência dentro da suíte **Komfort Chain**.
-
-### **1. Raiz do projeto (`modulo2/`)**
-
-Arquivos ligados ao módulo como um todo:
-
-* `docker-compose.yml`
-  Sobe: PostgreSQL, Graylog, Login Service e API Gateway.
-
-* `.github/workflows/`
-  Contém:
-
-  * `full-ci.yml`: pipeline completo (build, testes, SonarCloud, OWASP, Docker).
-  * `release.yml`: pipeline de release (versões taggeadas).
-
-* `README.md`
-  Documentação do módulo, explicando papéis, arquitetura e estrutura.
-
-Essa separação deixa claro o que pertence à **infraestrutura do módulo**, separado do código Java de cada microserviço.
-
----
-
-### **2. Diretório `login-service/`**
-
-É o serviço responsável por **autenticação** e **emissão de tokens**.
-
-Estrutura base (padrão Clean Architecture):
-
-```text
-login-service/
-├── src/main/java/com/cabos/login_service/
-│   ├── application/
-│   │   ├── dto/
-│   │   └── service/
-│   ├── domain/
-│   │   ├── model/
-│   │   └── repository/
-│   ├── infrastructure/
-│   │   ├── config/
-│   │   ├── persistence/
-│   │   └── security/
-│   └── presentation/
-│       ├── controller/
-│       └── advice/
-└── src/main/resources/
-    ├── application.yml
-    └── logback-spring.xml
+```bash
+curl -X POST http://localhost:8080/api/v1/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Test User",
+    "email": "test@example.com",
+    "password": "123456"
+  }'
 ```
 
-A seguir, o papel de cada camada e como isso conversa com **Clean Architecture** e **SOLID**.
+#### Login
+
+```bash
+curl -X POST http://localhost:8080/api/v1/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "test@example.com",
+    "password": "123456"
+  }'
+```
 
 ---
 
-#### **2.1. `application/` – Casos de uso**
+## 5. Clean Architecture no Módulo 2
 
-Aqui ficam as **regras de aplicação**, que orquestram o fluxo entre domínio e infraestrutura.
+A organização dos módulos respeita os princípios de **Clean Architecture**:
 
-* `application/dto/`
-  Contém objetos de transporte, como por exemplo:
+### 5.1 `domain/` – Regras de Negócio
 
-  * `LoginRequestDTO`
-  * `RegisterUserDTO`
-  * `AuthResponseDTO`
-
-  Esses DTOs:
-
-  * evitam expor diretamente a entidade de domínio (`User`);
-  * definem exatamente o que entra e o que sai nos endpoints;
-  * ajudam a aplicar **SRP** (cada classe com uma responsabilidade clara).
-
-* `application/service/`
-  Aqui entram classes como:
-
-  * `AuthenticationService`
-    Implementa o caso de uso de login, chamando repositório, comparando senhas, gerando token, etc.
-
-  * `UserRegistrationService` (ou similar)
-    Lida com cadastro de usuários.
-
-  Como isso se encaixa em **Clean Architecture**?
-
-  * Essas classes representam os **use cases**.
-  * Elas conhecem o domínio e dependem de **interfaces**, não de detalhes concretos (seguindo **DIP – Dependency Inversion Principle**).
-  * Não têm conhecimento de HTTP, controllers ou detalhes do banco.
-
----
-
-#### **2.2. `domain/` – Regras centrais do sistema**
-
-* `domain/model/`
-  Principalmente:
+* **Modelos de domínio**
 
   * `User`
-    Representa o usuário do sistema, com atributos como `id`, `username`, `password`, `role`, `enabled`.
+  * `Role`
 
-  Ela é:
+* **Exceções de domínio**
 
-  * o **modelo de domínio**, que expressa o que o sistema manipula;
-  * independente de frameworks (Spring, JPA, etc., quando possível);
-  * usada por camadas superiores sem expor detalhes técnicos.
+  * `InvalidCredentialsException`
+  * `InvalidTokenException`
+  * `UserAlreadyExistsException`
 
-* `domain/repository/`
-  Interface(s) que descrevem acesso a dados, por exemplo:
+* **Ports (interfaces)**
 
-  * `UserRepository` (interface de contrato).
+  * `UserRepositoryPort`
+  * `PasswordEncoderPort`
+  * `TokenProviderPort`
 
-  Em termos de **Clean Architecture**:
+* **Use Cases**
 
-  * o domínio descreve **o que precisa ser feito**, não **como**;
-  * a implementação concreta do repositório fica na infraestrutura, respeitando o **DIP**.
+  * `AuthenticateUserUseCase`
+  * `RegisterUserUseCase`
+  * `ValidateTokenUseCase`
+
+O domínio **não depende de Spring** nem de frameworks. Ele é focado em **regras de negócio**, o que facilita teste e reutilização.
+
+### 5.2 `spring/` – Aplicação, Adapters e Infraestrutura
+
+Responsável por “ligar” o domínio ao mundo externo:
+
+* **Configuração / Inversão de Controle**
+
+  * `BeanConfig`:
+
+    * Constrói os use cases do domínio.
+    * Implementa `PasswordEncoderPort` usando `BCryptPasswordEncoder`.
+    * Usa `JwtTokenProvider` como implementação de `TokenProviderPort`.
+  * `JwtProperties`: configurações externas de segredo e expiração do token.
+
+* **Segurança e Filtros**
+
+  * `SecurityConfig`:
+
+    * Desabilita estado (JWT stateless).
+    * Libera `/api/v1/login` e `/api/v1/register`.
+    * Exige autenticação nas demais rotas.
+  * `JwtAuthenticationFilter`:
+
+    * Lê o header `Authorization: Bearer <token>`.
+    * Valida o token via `TokenProviderPort`.
+    * Popula o `SecurityContext`.
+  * `JwtAuthenticationEntryPoint`:
+
+    * Retorna `401` para acessos não autorizados.
+
+* **Controller REST**
+
+  * `LoginController`:
+
+    * `POST /api/v1/register`
+    * `POST /api/v1/login`
+    * Mapeia exceções de domínio para códigos HTTP adequados.
+
+* **Persistência (MongoDB)**
+
+  * `UserEntity`: documento Mongo da coleção `users`.
+  * `SpringDataUserRepository`: `MongoRepository<UserEntity, String>`.
+  * `UserRepositoryAdapter`:
+
+    * Implementa `UserRepositoryPort`.
+    * Converte entre `User` (domínio) e `UserEntity` (persistência) usando `UserMapper`.
+
+* **DTOs e Mapper**
+
+  * DTOs usados na API:
+
+    * `RegisterRequestDTO`
+    * `LoginRequestDTO`
+    * `LoginResponseDTO`
+    * `UserResponseDTO`
+  * `UserMapper`:
+
+    * `User <-> UserEntity`
+    * `User -> UserResponseDTO`
+
+### 5.3 `gateway/` – API Gateway
+
+* `GatewayApplication`: aplicação Spring Boot do gateway.
+* `application.yml`:
+
+  * Define as rotas:
+
+    * `/api/v1/register` → `http://login-service:8081`
+    * `/api/v1/login` → `http://login-service:8081`
+  * Remove cabeçalhos sensíveis (`RemoveResponseHeader=Server`).
+
+Dessa forma, o **cliente** fala sempre com o Gateway, que funciona como **borda única** do sistema.
 
 ---
 
-#### **2.3. `infrastructure/` – Detalhes técnicos**
+## 6. SOLID na Implementação
 
-Tudo que é **implementação concreta** fica aqui.
+Alguns exemplos de como os princípios **SOLID** aparecem no módulo:
 
-* `infrastructure/config/`
-  Arquivos de configuração, por exemplo:
+* **S – Single Responsibility Principle**
 
-  * configuração de beans,
-  * configurações de segurança,
-  * integração com outros serviços.
+  * `AuthenticateUserUseCase`: apenas autentica usuários.
+  * `RegisterUserUseCase`: apenas registra usuários.
+  * `JwtAuthenticationFilter`: apenas trata extração e validação do token em cada requisição.
+  * `UserRepositoryAdapter`: apenas converte e delega persistência.
 
-* `infrastructure/persistence/`
-  Implementações de repositório, geralmente usando Spring Data JPA.
+* **O – Open/Closed Principle**
 
-  Exemplo típico:
+  * É possível adicionar novos tipos de token ou mecanismos de persistência **sem alterar** o domínio, apenas incluindo novas implementações de ports.
+  * Rotas do gateway podem ser estendidas via `application.yml`, mantendo as classes Java estáveis.
 
-  * `UserRepositoryImpl` ou diretamente um `UserJpaRepository` que estende `JpaRepository<User, Long>`.
+* **L – Liskov Substitution Principle**
 
-  Aqui entram detalhes como:
+  * Interfaces de ports (`UserRepositoryPort`, `TokenProviderPort`, `PasswordEncoderPort`) podem ser substituídas por outras implementações sem quebrar o fluxo dos use cases.
 
-  * anotações `@Repository`,
-  * queries específicas,
-  * mapeamento JPA.
+* **I – Interface Segregation Principle**
 
-* `infrastructure/security/`
-  Comportamentos ligados a autenticação/autorização, como:
+  * Interfaces bem focadas:
 
-  * `SecurityConfig`
-    Configura o Spring Security (rotas públicas, rotas protegidas, filtros, etc.).
+    * `UserRepositoryPort` não mistura responsabilidades de criptografia ou tokens.
+    * `PasswordEncoderPort` foca apenas em codificação/validação de senha.
 
-  * `JwtAuthenticationFilter`
-    Lê o token JWT no header, valida e injeta o usuário autenticado no contexto de segurança.
+* **D – Dependency Inversion Principle**
 
-  * `JwtUtil` ou `TokenService`
-    Gera e valida tokens JWT (em alguns projetos, isso fica em `application`, em outros em `infrastructure/security`; aqui você segue o padrão que escolheu).
-
-Isso tudo é **infraestrutura pura**: são os detalhes que “plugam” seus casos de uso na realidade (banco, segurança, etc.).
+  * O domínio depende de **abstrações** (ports), não de detalhes de framework.
+  * Implementações concretas (`UserRepositoryAdapter`, `JwtTokenProvider`) vivem na camada `spring` e são “plugadas” via `BeanConfig`.
 
 ---
 
-#### **2.4. `presentation/` – Interface HTTP**
+## 7. Arquivo de Configuração (application.yml)
 
-Aqui entra tudo que conversa com o “lado de fora” via HTTP.
+### 7.1 `spring/src/main/resources/application.yml`
 
-```text
-presentation/
-├── controller/
-└── advice/
+```yaml
+spring:
+  application:
+    name: login-service
+  data:
+    mongodb:
+      uri: mongodb://mongo:27017/login-db
+
+server:
+  port: 8081
+
+jwt:
+  secret: change-me-in-prod
+  expiration-seconds: 3600
 ```
 
-##### `controller/`
+* Configura a URL do MongoDB (integrado ao `docker-compose`).
+* Define porta do serviço de login (`8081`).
+* Define propriedades do token (segredo e tempo de expiração).
 
-* Controllers REST, como:
+### 7.2 `gateway/src/main/resources/application.yml`
 
-  * `AuthController`
-    Expõe endpoints `/login` e `/login/register`, recebendo DTOs, chamando serviços da camada `application` e devolvendo respostas HTTP.
+```yaml
+spring:
+  application:
+    name: gateway
+  cloud:
+    gateway:
+      routes:
+        - id: login-register
+          uri: http://login-service:8081
+          predicates:
+            - Path=/api/v1/register
+        - id: login-login
+          uri: http://login-service:8081
+          predicates:
+            - Path=/api/v1/login
+      default-filters:
+        - RemoveResponseHeader=Server
 
-Pontos importantes:
-
-* O controller **não** conhece detalhes de banco.
-* Ele chama serviços da `application`, convertendo HTTP → DTO → Serviço → Resposta.
-
-Isso ajuda a aplicar **SRP** e **separação de preocupações**: cada classe cuida apenas do que precisa.
-
-##### `advice/` – O que é isso?
-
-A pasta **`advice`** centraliza tratadores globais de exceção usando `@ControllerAdvice`.
-
-Aqui normalmente você tem uma classe como:
-
-* `GlobalExceptionHandler`
-
-O que ela faz:
-
-* Intercepta exceções lançadas pelos controllers/serviços.
-* Converte essas exceções em respostas HTTP padronizadas (status code + corpo de erro).
-* Evita espalhar `try/catch` por toda a aplicação.
-
-Por que isso faz sentido em **Clean Architecture**?
-
-* Tratamento de erro de interface HTTP é uma **preocupação da camada de apresentação**, não do domínio.
-* Com o `ControllerAdvice`, você agrupa esse comportamento em um ponto único, reduzindo acoplamento e repetição.
-
-Por que isso faz sentido em **SOLID**?
-
-* **SRP**: o controller foca em receber requisições e chamar serviços; o `GlobalExceptionHandler` foca em traduzir erros em respostas HTTP.
-* **OCP**: você pode adicionar novos tipos de erro ou mensagens customizadas estendendo o handler, sem mexer em todos os controllers.
-
-Resumindo:
-
-> A pasta `advice` é onde você concentra as classes responsáveis por tratar erros de forma global na camada de apresentação.
-
----
-
-### **3. Diretório `api-gateway/`**
-
-Este serviço é responsável por:
-
-* ser o ponto único de entrada;
-* validar tokens JWT;
-* rotear as chamadas para os demais módulos.
-
-Estrutura simplificada:
-
-```text
-api-gateway/
-├── src/main/java/com/cabos/api_gateway/
-│   ├── ApiGatewayApplication.java
-│   └── (configs e filtros, se aplicável)
-└── src/main/resources/
-    ├── application.yml
-    └── logback-spring.xml
+server:
+  port: 8080
 ```
 
-Ele tende a ser mais enxuto, justamente porque:
-
-* não tem lógica de negócio;
-* foca em **roteamento** e **segurança**;
-* aplica o princípio de manter cada serviço fazendo apenas o que precisa.
-
----
-
-## **Execução Local**
-
-### 1. Clonar o repositório
-
-```bash
-git clone https://github.com/Komfort-chain/modulo2.git
-cd modulo2
-```
-
-### 2. Gerar os artefatos
-
-```bash
-cd login-service && ./mvnw clean package -DskipTests
-cd ../api-gateway && ./mvnw clean package -DskipTests
-cd ..
-```
-
-### 3. Subir a stack
-
-```bash
-docker compose up --build -d
-```
-
----
-
-## **Serviços Esperados**
-
-| Serviço       | Porta | Descrição                        |
-| ------------- | ----- | -------------------------------- |
-| API Gateway   | 8080  | Entrada única e validação do JWT |
-| Login Service | 8081  | Autenticação e emissão de tokens |
-| PostgreSQL    | 5432  | Banco de dados de usuários       |
-| Graylog       | 9009  | Centralização de logs            |
-
----
-
-## **Endpoints Principais**
-
-### Registro de usuário
-
-```http
-POST /login/register
-```
-
-Exemplo de corpo:
-
-```json
-{
-  "username": "admin",
-  "password": "123456",
-  "role": "ADMIN"
-}
-```
-
-### Autenticação
-
-```http
-POST /login
-```
-
-Body:
-
-```json
-{
-  "username": "admin",
-  "password": "123456"
-}
-```
-
-Resposta:
-
-```json
-{
-  "token": "jwt_gerado_aqui"
-}
-```
-
----
-
-## **Testes Automatizados**
-
-A estrutura de testes acompanha a divisão por camadas:
-
-```text
-login-service/src/test/java/com/cabos/login_service/
-    application/service/
-    infrastructure/security/
-    presentation/controller/
-```
-
-Eles cobrem:
-
-* fluxo de autenticação;
-* registro de usuário;
-* validação de token;
-* comportamento HTTP dos endpoints;
-* integração com Spring Security.
-
-Essa bateria de testes ajuda a:
-
-* manter a qualidade exigida pelo SonarCloud;
-* evitar regressões;
-* garantir que o módulo se comporte como esperado.
-
----
-
-## **Workflows CI/CD**
-
-### `full-ci.yml`
-
-Responsável por:
-
-* build e testes;
-* análise no SonarCloud;
-* execução do OWASP Dependency-Check (com fallback offline);
-* upload de relatórios (JaCoCo, Surefire);
-* build e push das imagens no Docker Hub.
-
-### `release.yml`
-
-Executado quando é criada uma tag `vX.Y.Z`:
-
-* build dos serviços;
-* geração de changelog;
-* criação de release no GitHub;
-* upload dos artefatos `.jar`;
-* publicação de imagens versionadas.
-
----
-
-## **Imagens Docker Oficiais**
-
-| Serviço       | Link                                                                                                                               |
-| ------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| Login Service | [https://hub.docker.com/repository/docker/magyodev/login-service](https://hub.docker.com/repository/docker/magyodev/login-service) |
-| API Gateway   | [https://hub.docker.com/repository/docker/magyodev/api-gateway](https://hub.docker.com/repository/docker/magyodev/api-gateway)     |
-
-Tags:
-
-* `latest`
-* `${run_number}`
-* `vX.Y.Z`
-
----
-
-## **Logs e Monitoramento**
-
-Ambos os serviços enviam logs para o Graylog usando GELF.
-Isso facilita:
-
-* rastreamento de erros;
-* análise de fluxo de autenticação;
-* auditoria de requisições.
-
----
-
-## **Contribuição**
-
-1. Faça um fork do repositório
-2. Crie uma branch: `feature/nova-funcionalidade`
-3. Utilize commits semânticos
-4. Abra um Pull Request para `main`
-
----
-
-## **Autor**
-
-**Alan de Lima Silva (MagyoDev)**
-* GitHub: [https://github.com/MagyoDev](https://github.com/MagyoDev)
-* Docker Hub: [https://hub.docker.com/u/magyodev](https://hub.docker.com/u/magyodev)
-* E-mail: [magyodev@gmail.com](mailto:magyodev@gmail.com)
+* Define o gateway na porta `8080`.
+* Cria duas rotas apontando para o `login-service`.

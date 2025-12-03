@@ -1,0 +1,13 @@
+com\cabos\komfortchain\login\domain\model\Role.class
+com\cabos\komfortchain\login\domain\model\User.class
+com\cabos\komfortchain\login\domain\port\UserRepositoryPort.class
+com\cabos\komfortchain\login\domain\usecase\RegisterUserUseCase$RegisterUserCommand.class
+com\cabos\komfortchain\login\domain\usecase\ValidateTokenUseCase.class
+com\cabos\komfortchain\login\domain\usecase\RegisterUserUseCase.class
+com\cabos\komfortchain\login\domain\usecase\AuthenticateUserUseCase$AuthenticationResult.class
+com\cabos\komfortchain\login\domain\exception\InvalidTokenException.class
+com\cabos\komfortchain\login\domain\usecase\AuthenticateUserUseCase.class
+com\cabos\komfortchain\login\domain\port\TokenProviderPort.class
+com\cabos\komfortchain\login\domain\port\PasswordEncoderPort.class
+com\cabos\komfortchain\login\domain\exception\InvalidCredentialsException.class
+com\cabos\komfortchain\login\domain\exception\UserAlreadyExistsException.class

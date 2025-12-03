@@ -1,102 +1,38 @@
 version: "3.8"
 
 services:
-  # Banco de dados PostgreSQL
-  komfort_db:
-    image: postgres:16
-    container_name: komfort_db
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=komfort
-    ports:
-      - "5432:5432"
-    networks:
-      - net
-
-  # OpenSearch (backend do Graylog)
-  opensearch:
-    image: opensearchproject/opensearch:2.14.0
-    container_name: opensearch
-    environment:
-      discovery.type: single-node
-      DISABLE_SECURITY_PLUGIN: true
-    ports:
-      - "9200:9200"
-    networks:
-      - net
-
-  # MongoDB (banco do Graylog)
-  mongodb:
+  mongo:
     image: mongo:6
-    container_name: mongodb
+    container_name: login_mongo
     ports:
       - "27017:27017"
     networks:
-      - net
+      - komfort_net
 
-  # Graylog
-  graylog:
-    image: graylog/graylog:5.1
-    container_name: graylog
-    depends_on:
-      - mongodb
-      - opensearch
-    environment:
-      GRAYLOG_PASSWORD_SECRET: somepasswordpepper
-      GRAYLOG_ROOT_PASSWORD_SHA2: 8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918
-      GRAYLOG_HTTP_EXTERNAL_URI: http://localhost:9009/
-      GRAYLOG_ELASTICSEARCH_HOSTS: http://opensearch:9200
-      GRAYLOG_MONGODB_URI: mongodb://mongodb:27017/graylog
-    ports:
-      - "9009:9000"
-      - "12201:12201/udp"
-    networks:
-      - net
-
-  # SonarQube
-  sonarqube:
-    image: sonarqube:community
-    container_name: sonarqube
-    ports:
-      - "9000:9000"
-    networks:
-      - net
-
-  # Login Service
   login-service:
     build:
-      context: ./login-service
+      context: ./spring
       dockerfile: Dockerfile
-    container_name: login-service
-    environment:
-      - ENV_GRAYLOG_HOST=graylog
-      - ENV_GRAYLOG_PORT=12201
+    container_name: login_service
     depends_on:
-      - graylog
-      - komfort_db
-    expose:
-      - "8081"
-    networks:
-      - net
-
-  # API Gateway
-  api-gateway:
-    build:
-      context: ./api-gateway
-      dockerfile: Dockerfile
-    container_name: api-gateway
+      - mongo
     environment:
-      - ENV_GRAYLOG_HOST=graylog
-      - ENV_GRAYLOG_PORT=12201
+      - SPRING_DATA_MONGODB_URI=mongodb://mongo:27017/login-db
+    networks:
+      - komfort_net
+
+  gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    container_name: login_gateway
     depends_on:
       - login-service
-      - graylog
     ports:
       - "8080:8080"
     networks:
-      - net
+      - komfort_net
 
 networks:
-  net:
+  komfort_net:
     driver: bridge
